@@ -36,7 +36,11 @@ lazy val isAtLeastScala213 = Def.setting {
 lazy val versions = crossProject(JVMPlatform, JSPlatform)
   .settings(
     shared,
-    libraryDependencies += "io.github.alexarchambault" %% "data-class" % "0.2.3" % Provided
+    libraryDependencies ++= Seq(
+      "com.lihaoyi" %% "utest" % "0.7.4" % Test,
+      "io.github.alexarchambault" %% "data-class" % "0.2.3" % Provided
+    ),
+    testFrameworks += new TestFramework("utest.runner.Framework"),
   )
 
 lazy val versionsJVM = versions.jvm
