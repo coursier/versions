@@ -53,8 +53,12 @@ object VersionCompatibility {
         val c = VersionParse.versionConstraint(constraint)
         val v = Version(version)
         if (c.interval == VersionInterval.zero)
-          // FIXME This is not actually sem ver
-          c.preferred.exists(_.items.take(2) == v.items.take(2))
+          c.preferred.exists { wanted =>
+            wanted.items.take(1) == v.items.take(1) && {
+              import Ordering.Implicits._
+              wanted.items.drop(1) <= v.items.drop(1)
+            }
+          }
         else
           c.interval.contains(v)
       }
