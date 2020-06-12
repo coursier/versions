@@ -5,6 +5,15 @@ package coursier.version
  */
 sealed abstract class VersionCompatibility {
   def isCompatible(constraint: String, version: String): Boolean
+
+  final def name: String =
+    this match {
+      case VersionCompatibility.Always => "always compatible"
+      case VersionCompatibility.Strict => "strict"
+      case VersionCompatibility.SemVer => "semantic versioning"
+      case VersionCompatibility.Default | VersionCompatibility.PackVer =>
+        "package versioning policy"
+    }
 }
 
 object VersionCompatibility {
