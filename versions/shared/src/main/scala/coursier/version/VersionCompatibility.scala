@@ -50,11 +50,6 @@ object VersionCompatibility {
 
   /**
     * Semantic versioning version reconciliation.
-    *
-    * This particular instance behaves the same as [[Default]] when used by
-    * [[coursier.core.Resolution]]. Actual semantic versioning checks are handled
-    * by `coursier.params.rule.Strict` with field `semVer = true`, which is set up
-    * by `coursier.Resolve` when a SemVer reconciliation is added to it.
     */
   case object SemVer extends VersionCompatibility {
     def isCompatible(constraint: String, version: String): Boolean =
