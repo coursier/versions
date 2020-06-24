@@ -30,7 +30,7 @@ jobs:
         java-version: adopt@1.8.0-232
 
     - name: Compile
-      run: csbt test compatibilityCheck
+      run: csbt test compatibilityCheck "readme/run --check"
 
   publish:
     needs: test
