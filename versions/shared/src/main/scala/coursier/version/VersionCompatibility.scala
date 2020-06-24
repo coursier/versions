@@ -59,9 +59,10 @@ object VersionCompatibility {
         val v = Version(version)
         if (c.interval == VersionInterval.zero)
           c.preferred.exists { wanted =>
-            wanted.items.take(1) == v.items.take(1) && {
+            val toCompare = if (v.items.headOption.exists(_.isEmpty)) 2 else 1
+            wanted.items.take(toCompare) == v.items.take(toCompare) && {
               import Ordering.Implicits._
-              wanted.items.drop(1) <= v.items.drop(1)
+              wanted.items.drop(toCompare) <= v.items.drop(toCompare)
             }
           }
         else
