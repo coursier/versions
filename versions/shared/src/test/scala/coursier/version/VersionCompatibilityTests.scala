@@ -14,6 +14,8 @@ object VersionCompatibilityTests extends TestSuite {
 
       * - compatible("1.1.0", "1.2.3")
       * - compatible("1.1.0", "1.2.3-RC1")
+
+      * - compatible("0.1.1", "0.1.2")
     }
 
     "package versioning" - {
