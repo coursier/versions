@@ -15,6 +15,8 @@ sealed abstract class VersionCompatibility {
       case VersionCompatibility.Default | VersionCompatibility.PackVer =>
         "package versioning policy"
     }
+
+  def minimumCompatibleVersion(version: String): String
 }
 
 object VersionCompatibility {
@@ -22,11 +24,15 @@ object VersionCompatibility {
   case object Default extends VersionCompatibility {
     def isCompatible(constraint: String, version: String): Boolean =
       PackVer.isCompatible(constraint, version)
+    def minimumCompatibleVersion(version: String): String =
+      PackVer.minimumCompatibleVersion(version)
   }
 
   case object Always extends VersionCompatibility {
     def isCompatible(constraint: String, version: String): Boolean =
       true
+    def minimumCompatibleVersion(version: String): String =
+      "0"
   }
 
   /**
@@ -47,19 +53,23 @@ object VersionCompatibility {
         else
           c.interval.contains(v)
       }
+    def minimumCompatibleVersion(version: String): String =
+      version
   }
 
   /**
     * Semantic versioning version reconciliation.
     */
   case object SemVer extends VersionCompatibility {
+    private def significativePartLength(v: Version): Int =
+      if (v.items.headOption.exists(_.isEmpty)) 2 else 1
     def isCompatible(constraint: String, version: String): Boolean =
       constraint == version || {
         val c = VersionParse.versionConstraint(constraint)
         val v = Version(version)
         if (c.interval == VersionInterval.zero)
           c.preferred.exists { wanted =>
-            val toCompare = if (v.items.headOption.exists(_.isEmpty)) 2 else 1
+            val toCompare = significativePartLength(v)
             wanted.items.forall(_.isNumber) &&
             wanted.items.take(toCompare) == v.items.take(toCompare) && {
               import Ordering.Implicits._
@@ -69,6 +79,16 @@ object VersionCompatibility {
         else
           c.interval.contains(v)
       }
+    def minimumCompatibleVersion(version: String): String = {
+      val v = Version(version)
+      val toCompare = significativePartLength(v)
+      val candidateOpt = Some(v.items.take(toCompare))
+        .filter(_.forall(_.isNumber))
+        .map(_.collect { case n: Version.Numeric => n })
+        .map(items => items.map(_.repr).mkString("."))
+        .filter(s => Version(s).compareTo(v) < 0)
+      candidateOpt.getOrElse(version)
+    }
   }
 
   /**
@@ -93,6 +113,15 @@ object VersionCompatibility {
         else
           c.interval.contains(v)
       }
+    def minimumCompatibleVersion(version: String): String = {
+      val v = Version(version)
+      val candidateOpt = Some(v.items.take(1))
+        .filter(items => items.nonEmpty && items.forall(_.isNumber) && items.forall(!_.isEmpty))
+        .map(_.collect { case n: Version.Numeric => n })
+        .map(items => items.map(_.repr).mkString("."))
+        .filter(s => Version(s).compareTo(v) < 0)
+      candidateOpt.getOrElse(version)
+    }
   }
 
   case object PackVer extends VersionCompatibility {
@@ -105,6 +134,15 @@ object VersionCompatibility {
         else
           c.interval.contains(v)
       }
+    def minimumCompatibleVersion(version: String): String = {
+      val v = Version(version)
+      val candidateOpt = Some(v.items.take(2))
+        .filter(_.forall(_.isNumber))
+        .map(_.collect { case n: Version.Numeric => n })
+        .map(items => items.map(_.repr).mkString("."))
+        .filter(s => Version(s).compareTo(v) < 0)
+      candidateOpt.getOrElse(version)
+    }
   }
 
   def apply(input: String): Option[VersionCompatibility] =
