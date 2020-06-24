@@ -58,6 +58,31 @@ object VersionCompatibilityTests extends TestSuite {
       * - incompatible("1.1.0", "1.2.3-RC1")
       * - compatible("0.1.0", "0.1.0+foo")
     }
+
+    "all" - {
+
+      val compatibilities = Seq(
+        VersionCompatibility.SemVer,
+        VersionCompatibility.SemVerSpec,
+        VersionCompatibility.PackVer,
+        VersionCompatibility.Strict
+      )
+
+      def compatible(wanted: String, selected: String): Unit =
+        for (compat <- compatibilities) {
+          val compatible = compat.isCompatible(wanted, selected)
+          Predef.assert(compatible, s"Expected '$selected' to be compatible with '$wanted' per $compat")
+        }
+      def incompatible(wanted: String, selected: String): Unit =
+        for (compat <- compatibilities) {
+          val compatible = compat.isCompatible(wanted, selected)
+          Predef.assert(!compatible, s"Expected '$selected' not to be compatible with '$wanted' per $compat")
+        }
+
+      * - incompatible("1.1+", "1.2.3")
+      * - compatible("[1.1,1.3)", "1.2.3")
+      * - incompatible("[1.1,1.2)", "1.2.3")
+    }
   }
 
 }
