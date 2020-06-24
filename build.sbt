@@ -46,6 +46,18 @@ lazy val versions = crossProject(JVMPlatform, JSPlatform)
 lazy val versionsJVM = versions.jvm
 lazy val versionsJS = versions.js
 
+lazy val readme = project
+  .dependsOn(versionsJVM)
+  .disablePlugins(MimaPlugin)
+  .settings(
+    shared,
+    skip.in(publish) := true,
+    fork.in(run) := true,
+    forkOptions.in(Compile, run) := forkOptions.in(Compile, run).value.withWorkingDirectory(baseDirectory.in(ThisBuild).value),
+    libraryDependencies += "org.scalameta" %% "mdoc" % "2.2.2",
+    watchTriggers += (baseDirectory.in(ThisBuild).value / "README.template.md").toGlob
+  )
+
 crossScalaVersions := Nil
 skip.in(publish) := true
 disablePlugins(MimaPlugin)
