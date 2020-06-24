@@ -18,6 +18,7 @@ object VersionCompatibilityTests extends TestSuite {
 
       * - compatible("1.1.0", "1.2.3")
       * - compatible("1.1.0", "1.2.3-RC1")
+      * - incompatible("1.2.3-RC1", "1.2.3-RC2")
 
       * - compatible("0.1.1", "0.1.2")
       * - incompatible("0.1.1", "0.2.2")
@@ -36,6 +37,7 @@ object VersionCompatibilityTests extends TestSuite {
 
       * - compatible("1.1.0", "1.2.3")
       * - compatible("1.1.0", "1.2.3-RC1")
+      * - incompatible("1.2.3-RC1", "1.2.3-RC2")
 
       * - incompatible("0.1.1", "0.1.2")
       * - incompatible("0.1.1", "0.2.2")
