@@ -11,6 +11,7 @@ sealed abstract class VersionCompatibility {
       case VersionCompatibility.Always => "always compatible"
       case VersionCompatibility.Strict => "strict"
       case VersionCompatibility.SemVer => "semantic versioning"
+      case VersionCompatibility.SemVerSpec => "strict semantic versioning"
       case VersionCompatibility.Default | VersionCompatibility.PackVer =>
         "package versioning policy"
     }
@@ -59,6 +60,29 @@ object VersionCompatibility {
         if (c.interval == VersionInterval.zero)
           c.preferred.exists { wanted =>
             wanted.items.take(1) == v.items.take(1) && {
+              import Ordering.Implicits._
+              wanted.items.drop(1) <= v.items.drop(1)
+            }
+          }
+        else
+          c.interval.contains(v)
+      }
+  }
+
+  /**
+    * Semantic versioning version reconciliation, closer to the semantic versioning spec.
+    *
+    * Unlike `SemVer`, assumes 0.x versions are not compatible with each other.
+    */
+  case object SemVerSpec extends VersionCompatibility {
+    def isCompatible(constraint: String, version: String): Boolean =
+      constraint == version || {
+        val c = VersionParse.versionConstraint(constraint)
+        val v = Version(version)
+        if (c.interval == VersionInterval.zero)
+          c.preferred.exists { wanted =>
+            wanted.items.take(1) == v.items.take(1) &&
+            v.items.take(1).exists(!_.isEmpty) && {
               import Ordering.Implicits._
               wanted.items.drop(1) <= v.items.drop(1)
             }

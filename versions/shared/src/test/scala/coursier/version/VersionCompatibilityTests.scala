@@ -18,6 +18,24 @@ object VersionCompatibilityTests extends TestSuite {
       * - compatible("0.1.1", "0.1.2")
     }
 
+    "semverspec" - {
+
+      def compatible(wanted: String, selected: String): Unit = {
+        val compatible = VersionCompatibility.SemVerSpec.isCompatible(wanted, selected)
+        assert(compatible)
+      }
+      def incompatible(wanted: String, selected: String): Unit = {
+        val compatible = VersionCompatibility.SemVerSpec.isCompatible(wanted, selected)
+        assert(!compatible)
+      }
+
+      * - compatible("1.1.0", "1.2.3")
+      * - compatible("1.1.0", "1.2.3-RC1")
+
+      * - incompatible("0.1.1", "0.1.2")
+      * - incompatible("0.1.1", "0.2.2")
+    }
+
     "package versioning" - {
 
       def compatible(wanted: String, selected: String): Unit = {
