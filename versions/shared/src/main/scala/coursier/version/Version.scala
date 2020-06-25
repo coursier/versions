@@ -36,6 +36,12 @@ object Version {
           else rel0.compare(rel1)
       }
 
+    final def isNumber: Boolean =
+      this match {
+        case _: Numeric => true
+        case _ => false
+      }
+
     def order: Int
     def isEmpty: Boolean = compareToEmpty == 0
     def compareToEmpty: Int = 1

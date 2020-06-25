@@ -41,6 +41,13 @@ lazy val versions = crossProject(JVMPlatform, JSPlatform)
       "io.github.alexarchambault" %% "data-class" % "0.2.3" % Provided
     ),
     testFrameworks += new TestFramework("utest.runner.Framework"),
+    mimaBinaryIssueFilters ++= {
+      import com.typesafe.tools.mima.core._
+      Seq(
+        // Additional abstract method on *sealed* trait
+        ProblemFilters.exclude[ReversedMissingMethodProblem]("coursier.version.VersionCompatibility.minimumCompatibleVersion")
+      )
+    }
   )
 
 lazy val versionsJVM = versions.jvm
