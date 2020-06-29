@@ -151,6 +151,7 @@ object VersionCompatibility {
       case "always" => Some(Always)
       case "strict" => Some(Strict)
       case "semver" => Some(SemVer)
+      case "semver-spec" => Some(SemVerSpec)
       case "pvp" => Some(PackVer)
       case _ => None
     }
