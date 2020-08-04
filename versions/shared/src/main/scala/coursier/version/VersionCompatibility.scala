@@ -10,8 +10,9 @@ sealed abstract class VersionCompatibility {
     this match {
       case VersionCompatibility.Always => "always compatible"
       case VersionCompatibility.Strict => "strict"
-      case VersionCompatibility.SemVer => "semantic versioning"
       case VersionCompatibility.SemVerSpec => "strict semantic versioning"
+      case VersionCompatibility.EarlySemVer | VersionCompatibility.SemVer =>
+        "early semantic versioning"
       case VersionCompatibility.Default | VersionCompatibility.PackVer =>
         "package versioning policy"
     }
@@ -58,9 +59,20 @@ object VersionCompatibility {
   }
 
   /**
-    * Semantic versioning version reconciliation.
+    * Early Semantic Versioning version reconciliation.
     */
+  @deprecated("Use EarlySemVer or SemVerSpec instead. This will be removed in the future version.", "0.3.0")
   case object SemVer extends VersionCompatibility {
+    def isCompatible(constraint: String, version: String): Boolean =
+      EarlySemVer.isCompatible(constraint, version)
+    def minimumCompatibleVersion(version: String): String =
+      EarlySemVer.minimumCompatibleVersion(version)
+  }
+
+  /**
+    * Early Semantic Versioning version reconciliation.
+    */
+  case object EarlySemVer extends VersionCompatibility {
     private def significativePartLength(v: Version): Int =
       if (v.items.headOption.exists(_.isEmpty)) 2 else 1
     def isCompatible(constraint: String, version: String): Boolean =
@@ -150,9 +162,16 @@ object VersionCompatibility {
       case "default" => Some(Default)
       case "always" => Some(Always)
       case "strict" => Some(Strict)
-      case "semver" => Some(SemVer)
+      case "early-semver" => Some(EarlySemVer)
       case "semver-spec" => Some(SemVerSpec)
       case "pvp" => Some(PackVer)
+      case "semver" => sys.error(s"""'semver' is ambiguous.
+                                    |Based on the Semantic Versioning 2.0.0, 0.y.z updates are all initial development and thus
+                                    |0.6.0 and 0.6.1 would NOT maintain any compatibility, but in Scala ecosystem it is
+                                    |common to start adopting binary compatibility even in 0.y.z releases.
+                                    |
+                                    |Specify 'early-semver' for the early variant.
+                                    |Specify 'semver-spec' for the spec-correct SemVer.""".stripMargin)
       case _ => None
     }
 }

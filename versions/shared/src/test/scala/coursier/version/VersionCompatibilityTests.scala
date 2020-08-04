@@ -21,7 +21,7 @@ object VersionCompatibilityTests extends TestSuite {
   val tests = Tests {
     "semver" - {
 
-      implicit val compat = VersionCompatibility.SemVer
+      implicit val compat = VersionCompatibility.EarlySemVer
 
       test - compatible("1.1.0", "1.2.3")
       test - compatible("1.1.0", "1.2.3-RC1")
@@ -73,7 +73,7 @@ object VersionCompatibilityTests extends TestSuite {
     "all" - {
 
       val compatibilities = Seq(
-        VersionCompatibility.SemVer,
+        VersionCompatibility.EarlySemVer,
         VersionCompatibility.SemVerSpec,
         VersionCompatibility.PackVer,
         VersionCompatibility.Strict
