@@ -116,16 +116,17 @@ assert(!scalaLib)
 are compatible with each other.
 
 The following algorithms are available:
-- `SemVer`: semantic versioning
+- `EarlySemVer`: early semantic versioning that keeps 0.6.z bincompat
+- `SemVerSpec`: semantic versioning spec that treats all 0.y.z as initial development
 - `PackVer`: package versioning policy
 - `Strict`: exact match required
 - `Always`: assume any input constraint and version match
 - `Default`: currently equal to `PackVer`
 
 ```scala mdoc
-val semVerCheck1 = VersionCompatibility.SemVer.isCompatible("1.2.0", "1.2.4")
-val semVerCheck2 = VersionCompatibility.SemVer.isCompatible("1.2+", "1.2.4")
-val semVerCheck3 = VersionCompatibility.SemVer.isCompatible("2.1.3", "1.2.4")
+val semVerCheck1 = VersionCompatibility.EarlySemVer.isCompatible("1.2.0", "1.2.4")
+val semVerCheck2 = VersionCompatibility.EarlySemVer.isCompatible("1.2+", "1.2.4")
+val semVerCheck3 = VersionCompatibility.EarlySemVer.isCompatible("2.1.3", "1.2.4")
 ```
 
 ```scala mdoc:passthrough
