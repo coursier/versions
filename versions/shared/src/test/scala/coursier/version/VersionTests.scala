@@ -415,6 +415,12 @@ object VersionTests extends TestSuite {
       val expectedItems = Seq(Version.Number(1), Version.Max, Version.Number(0), Version.Tag("alpha"))
       assert(items == expectedItems)
     }
+
+
+    "orderingDocExamples" - {
+      assert(compare("1.0.1", "1.0.1e" ) < 0)
+      assert(compare("1.0.1.0", "1.0.1e" ) < 0)
+    }
   }
 
 }
