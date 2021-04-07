@@ -24,6 +24,7 @@ object VersionCompatibilityTests extends TestSuite {
       implicit val compat = VersionCompatibility.EarlySemVer
 
       test - compatible("1.1.0", "1.2.3")
+      test - compatible("1.0.0", "1.2.3")
       test - compatible("1.1.0", "1.2.3-RC1")
       test - incompatible("1.2.3-RC1", "1.2.3-RC2")
 
@@ -35,6 +36,9 @@ object VersionCompatibilityTests extends TestSuite {
 
       test - minimumCompatible("0.0.1", "0.0")
       test - minimumCompatible("0.1.2", "0.1")
+      test - minimumCompatible("1.0.0", "1")
+      test - minimumCompatible("0.0.0", "0.0")
+      test - minimumCompatible("0.1.0", "0.1")
     }
 
     "semverspec" - {
@@ -42,6 +46,7 @@ object VersionCompatibilityTests extends TestSuite {
       implicit val compat = VersionCompatibility.SemVerSpec
 
       test - compatible("1.1.0", "1.2.3")
+      test - compatible("1.0.0", "1.2.3")
       test - compatible("1.1.0", "1.2.3-RC1")
       test - incompatible("1.2.3-RC1", "1.2.3-RC2")
 
@@ -53,6 +58,9 @@ object VersionCompatibilityTests extends TestSuite {
 
       test - minimumCompatible("0.0.1", "0.0.1")
       test - minimumCompatible("0.1.2", "0.1.2")
+      test - minimumCompatible("1.0.0", "1")
+      test - minimumCompatible("0.0.0", "0.0.0")
+      test - minimumCompatible("0.1.0", "0.1.0")
     }
 
     "package versioning" - {
@@ -60,7 +68,9 @@ object VersionCompatibilityTests extends TestSuite {
       implicit val compat = VersionCompatibility.PackVer
 
       test - incompatible("1.1.0", "1.2.3")
+      test - incompatible("1.0.0", "1.2.3")
       test - incompatible("1.1.0", "1.2.3-RC1")
+      test - compatible("1.0.0", "1.0.1")
       test - compatible("0.1.0", "0.1.0+foo")
 
       test - minimumCompatible("1.0.1", "1.0")
@@ -68,6 +78,7 @@ object VersionCompatibilityTests extends TestSuite {
 
       test - minimumCompatible("0.0.1", "0.0")
       test - minimumCompatible("0.1.2", "0.1")
+      test - minimumCompatible("1.0.0", "1.0")
     }
 
     "all" - {
