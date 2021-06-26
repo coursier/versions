@@ -10,15 +10,56 @@ import scala.annotation.tailrec
  *
  *  Same kind of ordering as aether-util/src/main/java/org/eclipse/aether/util/version/GenericVersion.java
  */
-@data class Version(repr: String) extends Ordered[Version] {
+final class Version(val repr: String) extends Ordered[Version] with Product with Serializable {
   lazy val items: Vector[Version.Item] = Version.items(repr)
-  def compare(other: Version) = Version.listCompare(items, other.items)
+
   def isEmpty = items.forall(_.isEmpty)
+
+  // We can't use @data here or the equals method will be inconsistent with
+  // the compare method. This means we have to hand write these methods.
+
+  def withRepr(value: String): Version =
+    new Version(value)
+
+  override def compare(other: Version) = Version.listCompare(items, other.items)
+
+  override def canEqual(that: Any): Boolean =
+    that match {
+      case _: Version =>
+        true
+      case _ =>
+        false
+    }
+
+  override def equals(that: Any): Boolean =
+    this.canEqual(that) && (that match {
+      case that: Version =>
+        this.compare(that) == 0
+      case _ => false
+    })
+
+  override val productArity: Int = 1
+
+  override def productElement(n: Int): Any =
+    if (n == 0) {
+      repr
+    } else {
+      throw new IndexOutOfBoundsException(n)
+    }
+
+  override def toString: String =
+    s"Version(${repr})"
+
+  override def hashCode: Int =
+    Version.items(repr).filterNot(Version.isBuildMetadata).filterNot(_.isEmpty).hashCode
 }
 
 object Version {
 
   private[version] val zero = Version("0")
+
+  def apply(repr: String): Version =
+    new Version(repr)
 
   sealed abstract class Item extends Ordered[Item] {
     def compare(other: Item): Int =
