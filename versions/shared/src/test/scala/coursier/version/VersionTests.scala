@@ -8,6 +8,17 @@ object VersionTests extends TestSuite {
   def compare(first: String, second: String) =
     Version(first).compare(Version(second))
 
+  def compareEqualsConsistent(first: String, second: String): Boolean = {
+    val firstV: Version = Version(first)
+    val secondV: Version = Version(second)
+
+    if (firstV.compare(secondV) == 0) {
+      firstV == secondV && firstV.hashCode == secondV.hashCode
+    } else {
+      firstV != secondV
+    }
+  }
+
   def increasing(versions: String*): Boolean =
     versions.iterator.sliding(2).withPartial(false).forall{case Seq(a, b) => compare(a, b) < 0 }
 
@@ -86,6 +97,12 @@ object VersionTests extends TestSuite {
       assert(compare("0", "" ) == 0)
     }
 
+    "compareIsConsistentWithEquals" - {
+      assert(compareEqualsConsistent("1.0.0", "1.0.0"))
+      assert(compareEqualsConsistent("1.0.0", "1.0.0.0"))
+      assert(compareEqualsConsistent("1.0.0", "1"))
+      assert(compareEqualsConsistent("1.0.0", "2.0.0"))
+    }
 
     "numericOrdering" - {
       assert(compare("2", "10" ) < 0)
