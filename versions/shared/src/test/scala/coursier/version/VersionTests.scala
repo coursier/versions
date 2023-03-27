@@ -415,6 +415,15 @@ object VersionTests extends TestSuite {
       val expectedItems = Seq(Version.Number(1), Version.Max, Version.Number(0), Version.Tag("alpha"))
       assert(items == expectedItems)
     }
+
+    test("isStable") {
+      assert(Version("1.2.3").isStable)
+      assert(Version("1.2.3-3").isStable)
+      assert(!Version("1.2.3-SNAPSHOT").isStable)
+      assert(!Version("1.2.3-g12eafd3").isStable)
+      assert(!Version("1.2.3-M2").isStable)
+      assert(!Version("1.2.3-RC1").isStable)
+    }
   }
 
 }

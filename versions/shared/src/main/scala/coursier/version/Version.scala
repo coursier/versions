@@ -14,6 +14,13 @@ import scala.annotation.tailrec
   lazy val items: Vector[Version.Item] = Version.items(repr)
   def compare(other: Version) = Version.listCompare(items, other.items)
   def isEmpty = items.forall(_.isEmpty)
+
+  lazy val isStable: Boolean =
+    !repr.endsWith("SNAPSHOT") &&
+    !repr.exists(_.isLetter) &&
+    repr
+      .split(Array('.', '-'))
+      .forall(_.lengthCompare(5) <= 0)
 }
 
 object Version {
