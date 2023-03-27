@@ -21,7 +21,7 @@ jobs:
         jvm: 8
 
     - name: Compile
-      run: sbt test mimaReportBinaryIssues "readme/run --check"
+      run: sbt +test +mimaReportBinaryIssues "readme/run --check"
 
   publish:
     needs: test
