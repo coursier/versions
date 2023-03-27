@@ -42,6 +42,10 @@ jobs:
         with:
           jvm: 8
 
+      - run: .github/scripts/gpg-setup.sh
+        env:
+          PGP_SECRET: ${{ secrets.PGP_SECRET }}
+
       - name: Release
         run: sbt ci-release
         env:
