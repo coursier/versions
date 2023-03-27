@@ -47,6 +47,10 @@ lazy val versions = crossProject(JVMPlatform, JSPlatform)
         // Additional abstract method on *sealed* trait
         ProblemFilters.exclude[ReversedMissingMethodProblem]("coursier.version.VersionCompatibility.minimumCompatibleVersion")
       )
+    },
+    mimaPreviousArtifacts := {
+      Mima.binaryCompatibilityVersions
+        .map(ver => (organization.value % moduleName.value % ver).cross(crossVersion.value))
     }
   )
 
