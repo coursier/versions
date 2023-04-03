@@ -38,7 +38,7 @@ lazy val versions = crossProject(JVMPlatform, JSPlatform)
     shared,
     libraryDependencies ++= Seq(
       "com.lihaoyi" %% "utest" % "0.7.11" % Test,
-      "io.github.alexarchambault" %% "data-class" % "0.2.3" % Provided
+      "io.github.alexarchambault" %% "data-class" % "0.2.6" % Provided
     ),
     testFrameworks += new TestFramework("utest.runner.Framework"),
     mimaBinaryIssueFilters ++= {
