@@ -65,7 +65,7 @@ lazy val readme = project
     (publish / skip) := true,
     (run / fork) := true,
     (Compile / run / forkOptions) := (Compile / run / forkOptions).value.withWorkingDirectory((ThisBuild / baseDirectory).value),
-    libraryDependencies += "org.scalameta" %% "mdoc" % "2.2.2",
+    libraryDependencies += "org.scalameta" %% "mdoc" % "2.2.24",
     watchTriggers += ((ThisBuild / baseDirectory).value / "README.template.md").toGlob
   )
 
