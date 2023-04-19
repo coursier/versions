@@ -37,8 +37,8 @@ lazy val versions = crossProject(JVMPlatform, JSPlatform)
   .settings(
     shared,
     libraryDependencies ++= Seq(
-      "com.lihaoyi" %% "utest" % "0.7.4" % Test,
-      "io.github.alexarchambault" %% "data-class" % "0.2.3" % Provided
+      "com.lihaoyi" %% "utest" % "0.7.11" % Test,
+      "io.github.alexarchambault" %% "data-class" % "0.2.6" % Provided
     ),
     testFrameworks += new TestFramework("utest.runner.Framework"),
     mimaBinaryIssueFilters ++= {
@@ -62,13 +62,13 @@ lazy val readme = project
   .disablePlugins(MimaPlugin)
   .settings(
     shared,
-    skip.in(publish) := true,
-    fork.in(run) := true,
-    forkOptions.in(Compile, run) := forkOptions.in(Compile, run).value.withWorkingDirectory(baseDirectory.in(ThisBuild).value),
+    (publish / skip) := true,
+    (run / fork) := true,
+    (Compile / run / forkOptions) := (Compile / run / forkOptions).value.withWorkingDirectory((ThisBuild / baseDirectory).value),
     libraryDependencies += "org.scalameta" %% "mdoc" % "2.2.2",
-    watchTriggers += (baseDirectory.in(ThisBuild).value / "README.template.md").toGlob
+    watchTriggers += ((ThisBuild / baseDirectory).value / "README.template.md").toGlob
   )
 
 crossScalaVersions := Nil
-skip.in(publish) := true
+(publish / skip) := true
 disablePlugins(MimaPlugin)
