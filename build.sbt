@@ -14,8 +14,8 @@ inThisBuild(List(
 ))
 
 lazy val shared = Def.settings(
-  scalaVersion := "2.13.10",
-  crossScalaVersions := Seq("2.13.10", "2.12.17"),
+  scalaVersion := "2.13.13",
+  crossScalaVersions := Seq("2.13.13", "2.12.17"),
   libraryDependencies ++= {
     if (isAtLeastScala213.value) Nil
     else Seq(compilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full))
