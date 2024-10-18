@@ -31,14 +31,14 @@ Version parsing and comparison is handled by `coursier.version.Version`.
 Parse a version with
 ```scala
 val version = Version("1.2.0-RC3")
-// version: Version = Version("1.2.0-RC3")
+// version: Version = Version(repr = "1.2.0-RC3")
 val items = version.items
 // items: Vector[Version.Item] = Vector(
-//   Number(1),
-//   Number(2),
-//   Number(0),
-//   Tag("rc"),
-//   Number(3)
+//   Number(value = 1),
+//   Number(value = 2),
+//   Number(value = 0),
+//   Tag(value = "rc"),
+//   Number(value = 3)
 // )
 ```
 
@@ -71,18 +71,33 @@ Parse a version constraint with
 ```scala
 val intervalConstraint = VersionParse.versionConstraint("[1.2,1.3)")
 // intervalConstraint: VersionConstraint = VersionConstraint(
-//   VersionInterval(Some(Version("1.2")), Some(Version("1.3")), true, false),
-//   List()
+//   interval = VersionInterval(
+//     from = Some(value = Version(repr = "1.2")),
+//     to = Some(value = Version(repr = "1.3")),
+//     fromIncluded = true,
+//     toIncluded = false
+//   ),
+//   preferred = List()
 // )
 val intervalSelectorConstraint = VersionParse.versionConstraint("1.2+")
 // intervalSelectorConstraint: VersionConstraint = VersionConstraint(
-//   VersionInterval(Some(Version("1.2")), Some(Version("1.2.max")), true, true),
-//   List()
+//   interval = VersionInterval(
+//     from = Some(value = Version(repr = "1.2")),
+//     to = Some(value = Version(repr = "1.2.max")),
+//     fromIncluded = true,
+//     toIncluded = true
+//   ),
+//   preferred = List()
 // )
 val simpleVersionConstraint = VersionParse.versionConstraint("1.4.2")
 // simpleVersionConstraint: VersionConstraint = VersionConstraint(
-//   VersionInterval(None, None, false, false),
-//   List(Version("1.4.2"))
+//   interval = VersionInterval(
+//     from = None,
+//     to = None,
+//     fromIncluded = false,
+//     toIncluded = false
+//   ),
+//   preferred = List(Version(repr = "1.4.2"))
 // )
 ```
 
@@ -94,7 +109,11 @@ Like for versions, parsing is meant to be very loose, trying to make sense of an
 `ModuleMatcher` aims at representing glob-based module matchers, like
 ```scala
 val matcher = ModuleMatcher("org.scala-lang.modules", "*")
-// matcher: ModuleMatcher = ModuleMatcher("org.scala-lang.modules", "*", Map())
+// matcher: ModuleMatcher = ModuleMatcher(
+//   organizationMatcher = "org.scala-lang.modules",
+//   nameMatcher = "*",
+//   attributeMatchers = Map()
+// )
 val matchesScalaXml = matcher.matches("org.scala-lang.modules", "scala-xml_2.13")
 // matchesScalaXml: Boolean = true
 val matchesCoursier = matcher.matches("io.get-coursier", "coursier_2.13")
@@ -114,9 +133,15 @@ val allButScalaLib = ModuleMatchers(
   includeByDefault = true
 )
 // allButScalaLib: ModuleMatchers = ModuleMatchers(
-//   Set(ModuleMatcher("org.scala-lang", "scala-library", Map())),
-//   Set(),
-//   true
+//   exclude = Set(
+//     ModuleMatcher(
+//       organizationMatcher = "org.scala-lang",
+//       nameMatcher = "scala-library",
+//       attributeMatchers = Map()
+//     )
+//   ),
+//   include = Set(),
+//   includeByDefault = true
 // )
 val notScalaLib = allButScalaLib.matches("io.get-coursier", "coursier_2.13")
 // notScalaLib: Boolean = true

@@ -60,13 +60,12 @@ lazy val versionsJS = versions.js
 lazy val readme = project
   .dependsOn(versionsJVM)
   .disablePlugins(MimaPlugin)
+  .enablePlugins(MdocPlugin)
   .settings(
     shared,
     (publish / skip) := true,
-    (run / fork) := true,
-    (Compile / run / forkOptions) := (Compile / run / forkOptions).value.withWorkingDirectory((ThisBuild / baseDirectory).value),
-    libraryDependencies += "org.scalameta" %% "mdoc" % "2.2.2",
-    watchTriggers += ((ThisBuild / baseDirectory).value / "README.template.md").toGlob
+    mdocIn := (ThisBuild / baseDirectory).value / "README.template.md",
+    mdocOut := (ThisBuild / baseDirectory).value / "README.md"
   )
 
 crossScalaVersions := Nil

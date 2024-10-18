@@ -23,7 +23,24 @@ jobs:
         jvm: 8
 
     - name: Compile
-      run: sbt +test +mimaReportBinaryIssues "readme/run --check"
+      run: sbt +test +mimaReportBinaryIssues
+
+  readme:
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - uses: coursier/cache-action@v6
+    - uses: coursier/setup-action@v1
+      with:
+        jvm: 17
+
+    - name: Compile
+      run: sbt readme/mdoc
 
   publish:
     needs: test
