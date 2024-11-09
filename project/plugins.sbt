@@ -1,4 +1,4 @@
-addSbtPlugin("com.github.sbt" % "sbt-ci-release" % "1.8.0")
+addSbtPlugin("com.github.sbt" % "sbt-ci-release" % "1.9.0")
 addSbtPlugin("org.scalameta" % "sbt-mdoc" % "2.6.1" )
 addSbtPlugin("com.typesafe" % "sbt-mima-plugin" % "1.1.4")
 addSbtPlugin("org.xerial.sbt" % "sbt-pack" % "0.20")
