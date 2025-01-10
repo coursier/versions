@@ -37,7 +37,7 @@ lazy val versions = crossProject(JVMPlatform, JSPlatform)
   .settings(
     shared,
     libraryDependencies ++= Seq(
-      "com.lihaoyi" %% "utest" % "0.8.4" % Test,
+      "com.lihaoyi" %% "utest" % "0.8.5" % Test,
       "io.github.alexarchambault" %% "data-class" % "0.2.6" % Provided
     ),
     testFrameworks += new TestFramework("utest.runner.Framework"),
