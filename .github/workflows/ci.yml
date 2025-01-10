@@ -21,6 +21,7 @@ jobs:
     - uses: coursier/setup-action@v1
       with:
         jvm: 8
+        apps: sbt sbtn
 
     - name: Compile
       run: sbtn +test +mimaReportBinaryIssues
@@ -38,6 +39,7 @@ jobs:
     - uses: coursier/setup-action@v1
       with:
         jvm: 17
+        apps: sbt sbtn
 
     - name: Compile
       run: sbtn readme/mdoc
@@ -58,6 +60,7 @@ jobs:
       - uses: coursier/setup-action@v1
         with:
           jvm: 8
+          apps: sbt sbtn
 
       - run: .github/scripts/gpg-setup.sh
         env:
