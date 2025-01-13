@@ -24,7 +24,7 @@ jobs:
         apps: sbt sbtn
 
     - name: Compile
-      run: sbtn +test +mimaReportBinaryIssues
+      run: sbt +test +mimaReportBinaryIssues
 
   readme:
     runs-on: ubuntu-latest
@@ -42,7 +42,7 @@ jobs:
         apps: sbt sbtn
 
     - name: Compile
-      run: sbtn readme/mdoc
+      run: sbt readme/mdoc
 
   publish:
     needs: test
@@ -67,7 +67,7 @@ jobs:
           PGP_SECRET: ${{ secrets.PUBLISH_SECRET_KEY }}
 
       - name: Release
-        run: sbtn ci-release
+        run: sbt ci-release
         env:
           PGP_PASSPHRASE: ${{ secrets.PUBLISH_SECRET_KEY_PASSWORD }}
           PGP_SECRET: ${{ secrets.PUBLISH_SECRET_KEY }}
