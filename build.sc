@@ -101,6 +101,12 @@ trait Versions extends Cross.Module[String] with ScalaModule with VersionsPublis
     super.sources() ++ Seq(PathRef(T.workspace / "versions/shared/src"))
   }
 
+  trait ScalaTests extends super.ScalaTests {
+    def sources = T.sources {
+      super.sources() ++ Seq(PathRef(T.workspace / "versions/shared/test/src"))
+    }
+  }
+
   def compileIvyDeps = Agg(
     ivy"io.github.alexarchambault::data-class:0.2.6"
   )
