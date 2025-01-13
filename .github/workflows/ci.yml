@@ -2,7 +2,7 @@ name: CI
 on:
   push:
     branches:
-    - master
+    - main
     tags:
     - "v*"
   pull_request:
@@ -10,63 +10,57 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-
     steps:
-
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-
     - uses: coursier/cache-action@v6
     - uses: coursier/setup-action@v1
       with:
-        jvm: 8
+        jvm: 21
+    - name: Test
+      run: ./mill -i __.test
 
-    - name: Compile
-      run: sbt +test +mimaReportBinaryIssues
+  bin-compat:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - uses: coursier/cache-action@v6
+    - uses: coursier/setup-action@v1
+      with:
+        jvm: 21
+    - name: Check
+      run: ./mill -i __.mimaReportBinaryIssues
 
   readme:
     runs-on: ubuntu-latest
-
     steps:
-
     - uses: actions/checkout@v3
       with:
         fetch-depth: 0
-
     - uses: coursier/cache-action@v6
     - uses: coursier/setup-action@v1
       with:
-        jvm: 17
+        jvm: 21
+    - name: Validate README
+      run: ./mill -i mdoc
 
-    - name: Compile
-      run: sbt readme/mdoc
-
-  publish:
-    needs: test
-    if: github.event_name == 'push'
+  release:
     runs-on: ubuntu-latest
-
+    if: github.event_name == 'push'
     steps:
-
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-
       - uses: coursier/cache-action@v6
       - uses: coursier/setup-action@v1
         with:
-          jvm: 8
-
-      - run: .github/scripts/gpg-setup.sh
+          jvm: 21
+      - run: ./mill mill.scalalib.PublishModule/ --sonatypeUri https://s01.oss.sonatype.org/service/local --sonatypeSnapshotUri https://s01.oss.sonatype.org/content/repositories/snapshots
         env:
-          PGP_SECRET: ${{ secrets.PUBLISH_SECRET_KEY }}
-
-      - name: Release
-        run: sbt ci-release
-        env:
-          PGP_PASSPHRASE: ${{ secrets.PUBLISH_SECRET_KEY_PASSWORD }}
-          PGP_SECRET: ${{ secrets.PUBLISH_SECRET_KEY }}
-          SONATYPE_PASSWORD: ${{ secrets.PUBLISH_PASSWORD }}
-          SONATYPE_USERNAME: ${{ secrets.PUBLISH_USER }}
+          MILL_PGP_SECRET_BASE64: ${{ secrets.PUBLISH_SECRET_KEY }}
+          MILL_PGP_PASSPHRASE: ${{ secrets.PUBLISH_SECRET_KEY_PASSWORD }}
+          MILL_SONATYPE_USERNAME: ${{ secrets.PUBLISH_USER }}
+          MILL_SONATYPE_PASSWORD: ${{ secrets.PUBLISH_PASSWORD }}
