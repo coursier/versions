@@ -12,7 +12,7 @@ While still in `0.x`, backward binary compatibility hasn't been broken since its
 
 Add to your `build.sbt`:
 ```scala
-libraryDependencies += "io.get-coursier" %% "versions" % "0.2.1"
+libraryDependencies += "io.get-coursier" %% "versions" % "0.3.3"
 ```
 
 The latest version is
