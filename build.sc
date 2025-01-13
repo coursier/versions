@@ -101,10 +101,8 @@ trait Versions extends Cross.Module[String] with ScalaModule with VersionsPublis
     super.sources() ++ Seq(PathRef(T.workspace / "versions/shared/src"))
   }
 
-  trait ScalaTests extends super.ScalaTests {
-    def sources = T.sources {
-      super.sources() ++ Seq(PathRef(T.workspace / "versions/shared/test/src"))
-    }
+  def testSources = T.sources {
+    Seq(PathRef(T.workspace / "versions/shared/test/src"))
   }
 
   def compileIvyDeps = Agg(
@@ -124,6 +122,9 @@ trait VersionsJvm extends Versions {
       Deps.utest
     )
     def testFramework = "utest.runner.Framework"
+    def sources = T.sources {
+      super.sources() ++ testSources()
+    }
   }
 }
 
@@ -135,6 +136,9 @@ trait VersionsJs extends Versions with ScalaJSModule {
       Deps.utest
     )
     def testFramework = "utest.runner.Framework"
+    def sources = T.sources {
+      super.sources() ++ testSources()
+    }
   }
 }
 
