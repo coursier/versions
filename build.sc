@@ -13,7 +13,7 @@ import java.io.File
 object DepVersions {
   def mdoc = "2.3.6"
   def scala213 = "2.13.15"
-  def scalaJs = "1.17.0"
+  def scalaJs = "1.18.1"
 
   def scala = Seq(scala213, "2.12.20")
 }
