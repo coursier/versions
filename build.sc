@@ -5,6 +5,7 @@ import com.github.lolgab.mill.mima._
 import de.tobiasroeser.mill.vcs.version._
 import mill._
 import mill.scalajslib._
+import mill.scalanativelib._
 import mill.scalalib._
 import mill.scalalib.publish._
 
@@ -14,6 +15,7 @@ object DepVersions {
   def mdoc = "2.3.6"
   def scala213 = "2.13.16"
   def scalaJs = "1.18.1"
+  def scalaNative = "0.5.6"
 
   def scala = Seq(scala213, "2.12.20")
 }
@@ -142,9 +144,43 @@ trait VersionsJs extends Versions with ScalaJSModule {
   }
 }
 
+trait VersionsNative extends Versions with ScalaNativeModule {
+  def scalaNativeVersion = DepVersions.scalaNative
+
+  def mimaPreviousVersions = T {
+    val cutOff = coursier.core.Version("0.3.3")
+    super.mimaPreviousVersions().filter { v =>
+      coursier.core.Version(v) > cutOff
+    }
+  }
+
+  // required if mimaPreviousVersions is empty
+  def mimaPreviousArtifacts = T {
+    val versions = mimaPreviousVersions().distinct
+    mill.api.Result.Success(
+      Agg.from(
+        versions.map(version =>
+          ivy"${pomSettings().organization}:${artifactId()}:$version"
+        )
+      )
+    )
+  }
+
+  object test extends ScalaNativeTests {
+    def ivyDeps = super.ivyDeps() ++ Agg(
+      Deps.utest
+    )
+    def testFramework = "utest.runner.Framework"
+    def sources = T.sources {
+      super.sources() ++ testSources()
+    }
+  }
+}
+
 object versions extends Module {
   object jvm extends Cross[VersionsJvm](DepVersions.scala)
   object js extends Cross[VersionsJs](DepVersions.scala)
+  object native extends Cross[VersionsNative](DepVersions.scala)
 }
 
 
