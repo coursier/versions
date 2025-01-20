@@ -28,6 +28,7 @@ trait VersionsMima extends Mima {
     val current = os.proc("git", "describe", "--tags", "--match", "v*")
       .call(cwd = T.workspace)
       .out.trim()
+    val cutOff = coursier.core.Version("0.3.3")
     os.proc("git", "tag", "-l")
       .call(cwd = T.workspace)
       .out.lines()
@@ -35,8 +36,20 @@ trait VersionsMima extends Mima {
       .filter(_.startsWith("v"))
       .map(_.stripPrefix("v"))
       .map(coursier.core.Version(_))
+      .filter(_ > cutOff)
       .sorted
       .map(_.repr)
+  }
+  // required if mimaPreviousVersions is empty
+  def mimaPreviousArtifacts = T {
+    val versions = mimaPreviousVersions().distinct
+    mill.api.Result.Success(
+      Agg.from(
+        versions.map(version =>
+          ivy"${pomSettings().organization}:${artifactId()}:$version"
+        )
+      )
+    )
   }
 }
 
