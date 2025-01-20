@@ -1,6 +1,5 @@
 package coursier.version
 
-import coursier.version.{Version, VersionConstraint, VersionInterval, VersionParse}
 import utest._
 
 object VersionIntervalTests extends TestSuite {
@@ -322,17 +321,17 @@ object VersionIntervalTests extends TestSuite {
       "none" - {
         val s1 = "(,)"
         val c1 = VersionParse.versionInterval(s1).map(_.constraint)
-        assert(c1 == Some(VersionConstraint.all))
+        assert(c1 == Some(VersionConstraint.empty))
       }
       "preferred" - {
         val s1 = "[1.3,)"
         val c1 = VersionParse.versionInterval(s1).map(_.constraint)
-        assert(c1 == Some(VersionConstraint.preferred(VersionParse.version("1.3").get)))
+        assert(c1 == Some(VersionConstraint.fromPreferred("1.3", VersionParse.version("1.3").get)))
       }
       "interval" - {
         val s1 = "[1.3,2.4)"
         val c1 = VersionParse.versionInterval(s1).map(_.constraint)
-        assert(c1 == Some(VersionConstraint.interval(VersionInterval(VersionParse.version("1.3"), VersionParse.version("2.4"), true, false))))
+        assert(c1 == Some(VersionConstraint.fromInterval(s1, VersionInterval(VersionParse.version("1.3"), VersionParse.version("2.4"), true, false))))
       }
     }
   }

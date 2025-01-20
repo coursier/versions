@@ -106,7 +106,7 @@ trait Versions extends Cross.Module[String] with ScalaModule with VersionsPublis
   }
 
   def compileIvyDeps = Agg(
-    ivy"io.github.alexarchambault::data-class:0.2.6"
+    ivy"io.github.alexarchambault::data-class:0.2.7"
   )
 
   def mimaBinaryIssueFilters = super.mimaBinaryIssueFilters() ++ Seq(

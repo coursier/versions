@@ -61,7 +61,7 @@ object ConstraintReconciliation {
           else {
             val parsedConstraints = standard.map(VersionParse.versionConstraint)
             VersionConstraint.merge(parsedConstraints: _*)
-              .flatMap(_.repr)
+              .map(_.asString)
           }
         val retainedLatestOpt = retainLatestOpt(latests)
 
@@ -78,7 +78,7 @@ object ConstraintReconciliation {
             retainedLatestOpt
           else
             VersionConstraint.merge(parsedIntervals: _*)
-              .flatMap(_.repr)
+              .map(_.asString)
               .map(itv => (itv +: retainedLatestOpt.toSeq).mkString("&"))
         }
       }
@@ -102,9 +102,10 @@ object ConstraintReconciliation {
           else if (standard.lengthCompare(1) == 0) standard.headOption
           else {
             val parsedConstraints = standard.map(VersionParse.versionConstraint)
-            VersionConstraint.merge(parsedConstraints: _*)
+            val repr = VersionConstraint.merge(parsedConstraints: _*)
               .getOrElse(VersionConstraint.relaxedMerge(parsedConstraints: _*))
-              .repr
+              .asString
+            Some(repr)
           }
         val retainedLatestOpt = retainLatestOpt(latests)
         if (latests.isEmpty)
