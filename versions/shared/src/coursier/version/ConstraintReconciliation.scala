@@ -117,4 +117,36 @@ object ConstraintReconciliation {
       case _ => Default
     }
 
+  /** Strict version reconciliation.
+    *
+    * This particular instance behaves the same as [[Default]] when used by
+    * [[coursier.core.Resolution]]. Actual strict conflict manager is handled by
+    * `coursier.params.rule.Strict`, which is set up by `coursier.Resolve` when a strict
+    * reconciliation is added to it.
+    */
+  case object Strict extends ConstraintReconciliation {
+    def reconcile(versions: Seq[VersionConstraint]): Option[VersionConstraint] =
+      Default.reconcile(versions)
+  }
+
+  /** Semantic versioning version reconciliation.
+    *
+    * This particular instance behaves the same as [[Default]] when used by
+    * [[coursier.core.Resolution]]. Actual semantic versioning checks are handled by
+    * `coursier.params.rule.Strict` with field `semVer = true`, which is set up by
+    * `coursier.Resolve` when a SemVer reconciliation is added to it.
+    */
+  case object SemVer extends ConstraintReconciliation {
+    def reconcile(versions: Seq[VersionConstraint]): Option[VersionConstraint] =
+      Default.reconcile(versions)
+  }
+
+  def apply(input: String): Option[ConstraintReconciliation] =
+    input match {
+      case "default" => Some(Default)
+      case "relaxed" => Some(Relaxed)
+      case "strict"  => Some(Strict)
+      case "semver"  => Some(SemVer)
+      case _         => None
+    }
 }
