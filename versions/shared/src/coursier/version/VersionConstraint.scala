@@ -7,7 +7,28 @@ import scala.annotation.tailrec
 sealed abstract class VersionConstraint extends Product with Serializable with Ordered[VersionConstraint] {
   def asString: String
   def interval: VersionInterval
+
+  /**
+   * Preferred versions
+   *
+   * Always sorted in reverse order (higher version upfront)
+   */
   def preferred: Seq[Version]
+
+  def uniquePreferred: VersionConstraint =
+    if (preferred.lengthCompare(1) <= 0) this
+    else
+      VersionConstraint.from(interval, Seq(preferred.head))
+  def removeUnusedPreferred: VersionConstraint = {
+    val (keep, ignore) = preferred.partition { v =>
+      interval.from.forall { from =>
+        val cmp = v.compare(from)
+        cmp >= 0 || (interval.fromIncluded && cmp == 0)
+      }
+    }
+    if (ignore.isEmpty) this
+    else VersionConstraint.from(interval, keep)
+  }
 
   def generateString: String =
     VersionConstraint.generateString(interval, preferred)
@@ -29,12 +50,23 @@ sealed abstract class VersionConstraint extends Product with Serializable with O
 object VersionConstraint {
   def apply(version: String): VersionConstraint =
     Lazy(version)
-  def from(interval: VersionInterval, preferred: Seq[Version]): VersionConstraint =
-    VersionConstraint.Eager(
-      generateString(interval, preferred),
+  def from(interval: VersionInterval, preferred: Seq[Version]): VersionConstraint = {
+    val isSorted = preferred.iterator.sliding(2).withPartial(false).forall {
+      case Seq(a, b) =>
+        val cmp = a.compare(b)
+        cmp > 0 ||
+        // FIXME We'd need to disambiguate versions equals per "def compare" but not per "def equals"
+        (cmp == 0 && a.asString != b.asString)
+    }
+    val preferred0 =
+      if (isSorted) preferred
+      else preferred.distinct.sorted.reverse
+    Eager(
+      generateString(interval, preferred0),
       interval,
-      preferred
+      preferred0
     )
+  }
 
   def empty: VersionConstraint =
     empty0
@@ -73,17 +105,7 @@ object VersionConstraint {
 
       val constraintOpt = intervalOpt.map { interval =>
         val preferreds = constraints.flatMap(_.preferred).distinct
-        val repr =
-          if (interval == VersionInterval.zero && preferreds.length == 1)
-            preferreds.head.repr
-          else if (preferreds.isEmpty)
-            interval.repr
-          else if (interval == VersionInterval.zero)
-            preferreds.map(_.repr).mkString(";")
-          else
-            interval.repr + "&" + preferreds.map(_.repr).mkString(";")
-            // sys.error("TODO / string representation of interval and preferred versions together")
-        VersionConstraint.Eager(repr, interval, preferreds)
+        from(interval, preferreds)
       }
 
       constraintOpt.filter(_.isValid)

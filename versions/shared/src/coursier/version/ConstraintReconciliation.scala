@@ -58,6 +58,7 @@ object ConstraintReconciliation {
           else if (standard.lengthCompare(1) == 0) standard.headOption
           else
             VersionConstraint.merge(standard: _*)
+              .map(_.uniquePreferred.removeUnusedPreferred)
         val retainedLatestOpt = retainLatestOpt(latests)
 
         if (standard.isEmpty) retainedLatestOpt
@@ -71,6 +72,7 @@ object ConstraintReconciliation {
             retainedLatestOpt
           else
             VersionConstraint.merge(parsedIntervals: _*)
+              .map(_.uniquePreferred.removeUnusedPreferred) // FIXME Add retainedLatestOpt too
         }
       }
   }
@@ -94,6 +96,8 @@ object ConstraintReconciliation {
           else {
             val repr = VersionConstraint.merge(standard: _*)
               .getOrElse(VersionConstraint.relaxedMerge(standard: _*))
+              .uniquePreferred
+              .removeUnusedPreferred
             Some(repr)
           }
         val retainedLatestOpt = retainLatestOpt(latests)
