@@ -11,7 +11,14 @@ import scala.annotation.tailrec
  *  Same kind of ordering as aether-util/src/main/java/org/eclipse/aether/util/version/GenericVersion.java
  */
 @data class Version(repr: String) extends Ordered[Version] {
-  lazy val items: Vector[Version.Item] = Version.items(repr)
+  def asString: String = repr
+  private var items0: Vector[Version.Item] = null
+  def items: Vector[Version.Item] = {
+    // no need to guard against concurrent computations, this is not too expensive to compute
+    if (items0 == null)
+      items0 = Version.items(repr)
+    items0
+  }
   def compare(other: Version) = Version.listCompare(items, other.items)
   def isEmpty = items.forall(_.isEmpty)
 
@@ -21,11 +28,15 @@ import scala.annotation.tailrec
     repr
       .split(Array('.', '-'))
       .forall(_.lengthCompare(5) <= 0)
+
+  override lazy val hashCode = repr.hashCode()
 }
 
 object Version {
 
-  private[version] val zero = Version("0")
+  private val zero0 = Version("0")
+
+  def zero: Version = Version("0")
 
   sealed abstract class Item extends Ordered[Item] {
     def compare(other: Item): Int =

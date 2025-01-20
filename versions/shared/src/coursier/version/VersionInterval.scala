@@ -68,13 +68,13 @@ import dataclass.data
 
   def constraint: VersionConstraint =
     this match {
-      case VersionInterval.zero => VersionConstraint.all
+      case VersionInterval.zero => VersionConstraint.empty
       case itv =>
         (itv.from, itv.to, itv.fromIncluded, itv.toIncluded) match {
           case (Some(version), None, true, false) =>
-            VersionConstraint.preferred(version)
+            VersionConstraint.fromPreferred(version.repr, version)
           case _ =>
-            VersionConstraint.interval(itv)
+            VersionConstraint.fromInterval(repr, itv)
         }
     }
 
