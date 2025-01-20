@@ -6,16 +6,16 @@ package coursier.version
   * To be used mainly during resolution.
   */
 sealed abstract class ConstraintReconciliation extends Product with Serializable {
-  def reconcile(versions: Seq[String]): Option[String]
+  def reconcile(versions: Seq[VersionConstraint]): Option[VersionConstraint]
 }
 
 object ConstraintReconciliation {
 
-  private final val LatestIntegration = "latest.integration"
-  private final val LatestRelease = "latest.release"
-  private final val LatestStable = "latest.stable"
+  private final val LatestIntegration = VersionConstraint("latest.integration")
+  private final val LatestRelease = VersionConstraint("latest.release")
+  private final val LatestStable = VersionConstraint("latest.stable")
 
-  private def splitStandard(versions: Seq[String]): (Seq[String], Seq[String]) =
+  private def splitStandard(versions: Seq[VersionConstraint]): (Seq[VersionConstraint], Seq[VersionConstraint]) =
     versions.distinct.partition {
       case LatestIntegration => false
       case LatestRelease     => false
@@ -23,16 +23,14 @@ object ConstraintReconciliation {
       case _                 => true
     }
 
-  private def retainLatestOpt(latests: Seq[String]): Option[String] =
+  private def retainLatestOpt(latests: Seq[VersionConstraint]): Option[VersionConstraint] =
     if (latests.isEmpty) None
     else if (latests.lengthCompare(1) == 0) latests.headOption
     else {
       val set = latests.toSet
       val retained =
-        if (set(LatestIntegration))
-          LatestIntegration
-        else if (set(LatestRelease))
-          LatestRelease
+        if (set(LatestIntegration)) LatestIntegration
+        else if (set(LatestRelease)) LatestRelease
         else {
           // at least two distinct latest.* means we shouldn't even reach this else block anyway
           assert(set(LatestStable))
@@ -48,7 +46,7 @@ object ConstraintReconciliation {
    * Fails when passed version intervals that don't overlap.
    */
   case object Default extends ConstraintReconciliation {
-    def reconcile(versions: Seq[String]): Option[String] =
+    def reconcile(versions: Seq[VersionConstraint]): Option[VersionConstraint] =
       if (versions.isEmpty)
         None
       else if (versions.lengthCompare(1) == 0)
@@ -58,19 +56,14 @@ object ConstraintReconciliation {
         val retainedStandard =
           if (standard.isEmpty) None
           else if (standard.lengthCompare(1) == 0) standard.headOption
-          else {
-            val parsedConstraints = standard.map(VersionParse.versionConstraint)
-            VersionConstraint.merge(parsedConstraints: _*)
-              .map(_.asString)
-          }
+          else
+            VersionConstraint.merge(standard: _*)
         val retainedLatestOpt = retainLatestOpt(latests)
 
-        if (standard.isEmpty)
-          retainedLatestOpt
-        else if (latests.isEmpty)
-          retainedStandard
+        if (standard.isEmpty) retainedLatestOpt
+        else if (latests.isEmpty) retainedStandard
         else {
-          val parsedIntervals = standard.map(VersionParse.versionConstraint)
+          val parsedIntervals = standard
             .filter(_.preferred.isEmpty) // only keep intervals
             .filter(_.interval != VersionInterval.zero) // not interval matching any version
 
@@ -78,8 +71,6 @@ object ConstraintReconciliation {
             retainedLatestOpt
           else
             VersionConstraint.merge(parsedIntervals: _*)
-              .map(_.asString)
-              .map(itv => (itv +: retainedLatestOpt.toSeq).mkString("&"))
         }
       }
   }
@@ -90,7 +81,7 @@ object ConstraintReconciliation {
    * When passed version intervals that don't overlap, the lowest intervals are discarded until the remaining intervals do overlap.
    */
   case object Relaxed extends ConstraintReconciliation {
-    def reconcile(versions: Seq[String]): Option[String] =
+    def reconcile(versions: Seq[VersionConstraint]): Option[VersionConstraint] =
       if (versions.isEmpty)
         None
       else if (versions.lengthCompare(1) == 0)
@@ -101,17 +92,13 @@ object ConstraintReconciliation {
           if (standard.isEmpty) None
           else if (standard.lengthCompare(1) == 0) standard.headOption
           else {
-            val parsedConstraints = standard.map(VersionParse.versionConstraint)
-            val repr = VersionConstraint.merge(parsedConstraints: _*)
-              .getOrElse(VersionConstraint.relaxedMerge(parsedConstraints: _*))
-              .asString
+            val repr = VersionConstraint.merge(standard: _*)
+              .getOrElse(VersionConstraint.relaxedMerge(standard: _*))
             Some(repr)
           }
         val retainedLatestOpt = retainLatestOpt(latests)
-        if (latests.isEmpty)
-          retainedStandard
-        else
-          retainedLatestOpt
+        if (latests.isEmpty) retainedStandard
+        else retainedLatestOpt
       }
   }
 
