@@ -20,7 +20,11 @@ import scala.util.matching.Regex
   lazy val orgPattern = blobToPattern(organizationMatcher)
   lazy val namePattern = blobToPattern(nameMatcher)
   lazy val attributesPattern = attributeMatchers
-    .mapValues(blobToPattern(_))
+    .iterator
+    .map {
+      case (k, v) =>
+        (k, blobToPattern(v))
+    }
     .toMap
 
   def matches(organization: String, name: String): Boolean =
