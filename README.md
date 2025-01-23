@@ -5,8 +5,9 @@
 
 It's mainly designed around the needs of coursier itself, but can find uses outside of it.
 
-It aims at not breaking backward binary compatibility, and follows semantic versioning.
-While still in `0.x`, backward binary compatibility hasn't been broken since its first release.
+It aims at limiting binary compatibility breakages, and follows semantic versioning.
+While still in `0.x`, backward binary compatibility hasn't been broken between its first release
+up to `0.3.3`. `0.4.0` breaks binary compatibility with former versions.
 
 ## Usage
 
