@@ -28,7 +28,7 @@ trait VersionsMima extends Mima {
     val current = os.proc("git", "describe", "--tags", "--match", "v*")
       .call(cwd = T.workspace)
       .out.trim()
-    val cutOff = coursier.core.Version("0.3.3")
+    val cutOff = coursier.core.Version("0.4.0")
     os.proc("git", "tag", "-l")
       .call(cwd = T.workspace)
       .out.lines()

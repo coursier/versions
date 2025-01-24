@@ -74,10 +74,14 @@ object VersionParse {
       None
   }
 
-  def versionConstraint(s: String): VersionConstraint = {
-    def noConstraint = if (s.isEmpty) Some(VersionConstraint.empty) else None
+  def versionConstraint(s: String): VersionConstraint =
+    eagerVersionConstraint(s)
+
+  private[version] def eagerVersionConstraint(s: String): VersionConstraint.Eager = {
+    def noConstraint = if (s.isEmpty) Some(VersionConstraint.empty0) else None
 
     noConstraint
+      .orElse(Latest(s).map(VersionConstraint.fromLatest(s, _)))
       .orElse(ivyLatestSubRevisionInterval(s).map(VersionConstraint.fromInterval(s, _)))
       .orElse(versionInterval(s).orElse(multiVersionInterval(s)).map(VersionConstraint.fromInterval(s, _)))
       .getOrElse(VersionConstraint.fromPreferred(s, Version(s)))
