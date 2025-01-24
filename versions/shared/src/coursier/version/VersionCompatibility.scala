@@ -1,11 +1,14 @@
 package coursier.version
 
+import scala.annotation.nowarn
+
 /**
  * Represents a reconciliation strategy given a dependency conflict.
  */
 sealed abstract class VersionCompatibility {
   def isCompatible(constraint: String, version: String): Boolean
 
+  @nowarn
   final def name: String =
     this match {
       case VersionCompatibility.Always => "always compatible"
