@@ -13,8 +13,10 @@ sealed abstract class VersionConstraint extends Product with Serializable with O
    */
   def preferred: Option[Version]
 
+  def latest: Option[Latest]
+
   def generateString: String =
-    VersionConstraint.generateString(interval, preferred)
+    VersionConstraint.generateString(interval, preferred, latest)
 
   private lazy val compareKey = preferred.headOption.orElse(interval.from).getOrElse(Version.zero)
   def compare(other: VersionConstraint): Int =
@@ -33,34 +35,41 @@ sealed abstract class VersionConstraint extends Product with Serializable with O
 object VersionConstraint {
   def apply(version: String): VersionConstraint =
     Lazy(version)
-  def from(interval: VersionInterval, preferred: Option[Version]): VersionConstraint =
+  def from(interval: VersionInterval, preferred: Option[Version], latest: Option[Latest]): VersionConstraint =
     Eager(
-      generateString(interval, preferred),
+      generateString(interval, preferred, latest),
       interval,
-      preferred
+      preferred,
+      latest
     )
 
   def empty: VersionConstraint =
     empty0
 
-  private def generateString(interval: VersionInterval, preferred: Option[Version]): String =
-    if (interval == VersionInterval.zero && preferred.isEmpty)
+  private def generateString(interval: VersionInterval, preferred: Option[Version], latest: Option[Latest]): String =
+    // FIXME Might be buggy with the addition of latest
+    if (interval == VersionInterval.zero && preferred.isEmpty && latest.isEmpty)
       ""
-    else if (interval == VersionInterval.zero && preferred.nonEmpty)
+    else if (interval == VersionInterval.zero && preferred.nonEmpty && latest.isEmpty)
       preferred.get.asString
-    else if (preferred.isEmpty)
+    else if (interval == VersionInterval.zero && preferred.isEmpty && latest.nonEmpty)
+      latest.get.asString
+    else if (preferred.isEmpty && latest.isEmpty)
       interval.repr
-    else if (interval == VersionInterval.zero)
+    else if (interval == VersionInterval.zero && preferred.nonEmpty && latest.isEmpty)
       preferred.get.asString
+    else if (interval == VersionInterval.zero && preferred.isEmpty && latest.nonEmpty)
+      latest.get.asString
     else
-      interval.repr + "&" + preferred.get.asString
+      interval.repr + "&" + (preferred.get.asString +: latest.toSeq.map(_.asString)).mkString(";")
       // sys.error("TODO / string representation of interval and preferred versions together")
 
   def fromVersion(version: Version): VersionConstraint =
     Eager(
       version.repr,
       VersionInterval.zero,
-      Some(version)
+      Some(version),
+      None
     )
 
   def merge(constraints: VersionConstraint*): Option[VersionConstraint] =
@@ -77,9 +86,11 @@ object VersionConstraint {
 
       val constraintOpt = intervalOpt.map { interval =>
         val preferreds = constraints.flatMap(_.preferred)
+        val latests = constraints.flatMap(_.latest)
         from(
           interval,
-          Some(preferreds).filter(_.nonEmpty).map(_.max)
+          Some(preferreds).filter(_.nonEmpty).map(_.max),
+          Some(latests).filter(_.nonEmpty).map(_.max)
         )
       }
 
@@ -119,11 +130,13 @@ object VersionConstraint {
 
 
   private[version] def fromPreferred(input: String, version: Version): Eager =
-    Eager(input, VersionInterval.zero, Some(version))
+    Eager(input, VersionInterval.zero, Some(version), None)
   private[version] def fromInterval(input: String, interval: VersionInterval): Eager =
-    Eager(input, interval, None)
+    Eager(input, interval, None, None)
+  private[version] def fromLatest(input: String, latest: Latest): Eager =
+    Eager(input, VersionInterval.zero, None, Some(latest))
 
-  private[version] val empty0 = Eager("", VersionInterval.zero, None)
+  private[version] val empty0 = Eager("", VersionInterval.zero, None, None)
 
   private[coursier] val parsedValueAsToString: ThreadLocal[Boolean] = new ThreadLocal[Boolean] {
     override protected def initialValue(): Boolean =
@@ -131,19 +144,20 @@ object VersionConstraint {
   }
 
   @data class Lazy(asString: String) extends VersionConstraint {
-    private var parsed0: VersionConstraint = null
+    private var parsed0: Eager = null
     private def parsed = {
       if (parsed0 == null)
-        parsed0 = VersionParse.versionConstraint(asString)
+        parsed0 = VersionParse.eagerVersionConstraint(asString)
       parsed0
     }
     def interval: VersionInterval = parsed.interval
     def preferred: Option[Version] = parsed.preferred
+    def latest: Option[Latest] = parsed.latest
 
     override def toString: String =
       if (parsedValueAsToString.get()) asString
       else
-        s"VersionConstraint.Lazy($asString, ${if (parsed0 == null) "[unparsed]" else s"$interval, $preferred"})"
+        s"VersionConstraint.Lazy($asString, ${if (parsed0 == null) "[unparsed]" else s"$interval, $preferred, $latest"})"
     override def hashCode(): Int =
       (VersionConstraint, asString).hashCode()
     override def equals(obj: Any): Boolean =
@@ -155,12 +169,13 @@ object VersionConstraint {
   @data class Eager(
     asString: String,
     interval: VersionInterval,
-    preferred: Option[Version]
+    preferred: Option[Version],
+    latest: Option[Latest]
   ) extends VersionConstraint {
     override def toString: String =
       if (parsedValueAsToString.get()) asString
       else
-        s"VersionConstraint.Eager($asString, $interval, $preferred)"
+        s"VersionConstraint.Eager($asString, $interval, $preferred, $latest)"
     override def hashCode(): Int =
       (VersionConstraint, asString).hashCode()
     override def equals(obj: Any): Boolean =
