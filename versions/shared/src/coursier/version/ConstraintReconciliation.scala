@@ -11,35 +11,6 @@ sealed abstract class ConstraintReconciliation extends Product with Serializable
 
 object ConstraintReconciliation {
 
-  private final val LatestIntegration = VersionConstraint("latest.integration")
-  private final val LatestRelease = VersionConstraint("latest.release")
-  private final val LatestStable = VersionConstraint("latest.stable")
-
-  private def splitStandard(versions: Seq[VersionConstraint]): (Seq[VersionConstraint], Seq[VersionConstraint]) =
-    versions.distinct.partition {
-      case LatestIntegration => false
-      case LatestRelease     => false
-      case LatestStable      => false
-      case _                 => true
-    }
-
-  private def retainLatestOpt(latests: Seq[VersionConstraint]): Option[VersionConstraint] =
-    if (latests.isEmpty) None
-    else if (latests.lengthCompare(1) == 0) latests.headOption
-    else {
-      val set = latests.toSet
-      val retained =
-        if (set(LatestIntegration)) LatestIntegration
-        else if (set(LatestRelease)) LatestRelease
-        else {
-          // at least two distinct latest.* means we shouldn't even reach this else block anyway
-          assert(set(LatestStable))
-          LatestStable
-        }
-      Some(retained)
-    }
-
-
   /**
    * Keeps the intersection of intervals, retains the latest version, etc. as described in the coursier documentation
    *
@@ -47,33 +18,7 @@ object ConstraintReconciliation {
    */
   case object Default extends ConstraintReconciliation {
     def reconcile(versions: Seq[VersionConstraint]): Option[VersionConstraint] =
-      if (versions.isEmpty)
-        None
-      else if (versions.lengthCompare(1) == 0)
-        Some(versions.head)
-      else {
-        val (standard, latests) = splitStandard(versions)
-        val retainedStandard =
-          if (standard.isEmpty) None
-          else if (standard.lengthCompare(1) == 0) standard.headOption
-          else
-            VersionConstraint.merge(standard: _*)
-        val retainedLatestOpt = retainLatestOpt(latests)
-
-        if (standard.isEmpty) retainedLatestOpt
-        else if (latests.isEmpty) retainedStandard
-        else {
-          val parsedIntervals = standard
-            .filter(_.preferred.isEmpty) // only keep intervals
-            .filter(_.interval != VersionInterval.zero) // not interval matching any version
-
-          if (parsedIntervals.isEmpty)
-            retainedLatestOpt
-          else
-            // FIXME Add retainedLatestOpt too
-            VersionConstraint.merge(parsedIntervals: _*)
-        }
-      }
+      VersionConstraint.merge(versions: _*)
   }
 
   /**
@@ -83,23 +28,9 @@ object ConstraintReconciliation {
    */
   case object Relaxed extends ConstraintReconciliation {
     def reconcile(versions: Seq[VersionConstraint]): Option[VersionConstraint] =
-      if (versions.isEmpty)
-        None
-      else if (versions.lengthCompare(1) == 0)
-        Some(versions.head)
-      else {
-        val (standard, latests) = splitStandard(versions)
-        val retainedStandard =
-          if (standard.isEmpty) None
-          else if (standard.lengthCompare(1) == 0) standard.headOption
-          else {
-            val repr = VersionConstraint.merge(standard: _*)
-              .getOrElse(VersionConstraint.relaxedMerge(standard: _*))
-            Some(repr)
-          }
-        val retainedLatestOpt = retainLatestOpt(latests)
-        if (latests.isEmpty) retainedStandard
-        else retainedLatestOpt
+      Some {
+        VersionConstraint.merge(versions: _*)
+          .getOrElse(VersionConstraint.relaxedMerge(versions: _*))
       }
   }
 

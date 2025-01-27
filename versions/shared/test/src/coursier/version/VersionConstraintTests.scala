@@ -88,6 +88,50 @@ object VersionConstraintTests extends TestSuite {
           VersionParse.versionConstraint("2.8"))
         assert(c0.isEmpty)
       }
+
+      test {
+        val c0 = VersionConstraint.merge(
+          VersionParse.versionConstraint("[1.0,3.2)"),
+          VersionParse.versionConstraint("[3.0,4.0)"),
+          VersionParse.versionConstraint("2.8")).get.generateString
+        assert(c0 == "[3.0,3.2)")
+      }
+
+      test {
+        val c0 = VersionConstraint.merge(
+          VersionParse.versionConstraint("[1.0,3.2)"),
+          VersionParse.versionConstraint("[3.0,4.0)"),
+          VersionParse.versionConstraint("3.0")).get.generateString
+        pprint.err.log(c0)
+        assert(c0 == "[3.0,3.2)&3.0")
+      }
+
+      test {
+        val c0 = VersionConstraint.merge(
+          VersionParse.versionConstraint("[1.0,3.2)"),
+          VersionParse.versionConstraint("[3.0,4.0)"),
+          VersionParse.versionConstraint("3.1")).get.generateString
+        pprint.err.log(c0)
+        assert(c0 == "[3.0,3.2)&3.1")
+      }
+
+      test {
+        val c0 = VersionConstraint.merge(
+          VersionParse.versionConstraint("[1.0,3.2)"),
+          VersionParse.versionConstraint("[3.0,4.0)"),
+          VersionParse.versionConstraint("3.2"))
+        pprint.err.log(c0)
+        assert(c0.isEmpty)
+      }
+
+      test {
+        val c0 = VersionConstraint.merge(
+          VersionParse.versionConstraint("[1.0,3.2)"),
+          VersionParse.versionConstraint("[3.0,4.0)"),
+          VersionParse.versionConstraint("4.0"))
+        pprint.err.log(c0)
+        assert(c0.isEmpty)
+      }
     }
 
     test("relaxedMerge") {
@@ -102,8 +146,8 @@ object VersionConstraintTests extends TestSuite {
         val s0 = VersionConstraint.relaxedMerge(
           VersionParse.versionConstraint("[1.0,2.0)"),
           VersionParse.versionConstraint("[3.0,4.0)"),
-          VersionParse.versionConstraint("2.8")).preferred.head.repr
-        assert(s0 == "2.8")
+          VersionParse.versionConstraint("2.8")).generateString
+        assert(s0 == "[3.0,4.0)")
       }
     }
   }
