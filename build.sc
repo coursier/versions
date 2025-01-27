@@ -20,6 +20,7 @@ object DepVersions {
 
 object Deps {
   def macroParadise = ivy"org.scalamacros:::paradise:2.1.1"
+  def pprint = ivy"com.lihaoyi::pprint::0.9.0"
   def utest = ivy"com.lihaoyi::utest::0.8.5"
 }
 
@@ -132,6 +133,7 @@ trait VersionsJvm extends Versions {
 
   object test extends ScalaTests {
     def ivyDeps = super.ivyDeps() ++ Agg(
+      Deps.pprint,
       Deps.utest
     )
     def testFramework = "utest.runner.Framework"
@@ -146,6 +148,7 @@ trait VersionsJs extends Versions with ScalaJSModule {
 
   object test extends ScalaJSTests {
     def ivyDeps = super.ivyDeps() ++ Agg(
+      Deps.pprint,
       Deps.utest
     )
     def testFramework = "utest.runner.Framework"
