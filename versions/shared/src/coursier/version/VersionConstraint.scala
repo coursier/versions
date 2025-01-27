@@ -30,6 +30,8 @@ sealed abstract class VersionConstraint extends Product with Serializable with O
           cmp < 0 || (cmp == 0 && interval.toIncluded)
         }
     }
+
+  def withLatest(latestOpt: Option[Latest]): VersionConstraint
 }
 
 object VersionConstraint {
@@ -46,23 +48,17 @@ object VersionConstraint {
   def empty: VersionConstraint =
     empty0
 
-  private def generateString(interval: VersionInterval, preferred: Option[Version], latest: Option[Latest]): String =
-    // FIXME Might be buggy with the addition of latest
-    if (interval == VersionInterval.zero && preferred.isEmpty && latest.isEmpty)
-      ""
-    else if (interval == VersionInterval.zero && preferred.nonEmpty && latest.isEmpty)
-      preferred.get.asString
-    else if (interval == VersionInterval.zero && preferred.isEmpty && latest.nonEmpty)
-      latest.get.asString
-    else if (preferred.isEmpty && latest.isEmpty)
-      interval.repr
-    else if (interval == VersionInterval.zero && preferred.nonEmpty && latest.isEmpty)
-      preferred.get.asString
-    else if (interval == VersionInterval.zero && preferred.isEmpty && latest.nonEmpty)
-      latest.get.asString
+  private def generateString(interval: VersionInterval, preferred: Option[Version], latest: Option[Latest]): String = {
+
+    val nonIntervalPartOpt =
+      if (preferred.isEmpty && latest.isEmpty) None
+      else Some((preferred.iterator.map(_.asString) ++ latest.iterator.map(_.asString)).mkString(";"))
+
+    if (interval == VersionInterval.zero)
+      nonIntervalPartOpt.getOrElse("")
     else
-      interval.repr + "&" + (preferred.get.asString +: latest.toSeq.map(_.asString)).mkString(";")
-      // sys.error("TODO / string representation of interval and preferred versions together")
+      (Iterator(interval.repr) ++ nonIntervalPartOpt.iterator).mkString("&")
+  }
 
   def fromVersion(version: Version): VersionConstraint =
     Eager(
@@ -74,7 +70,7 @@ object VersionConstraint {
 
   def merge(constraints: VersionConstraint*): Option[VersionConstraint] =
     if (constraints.isEmpty) Some(empty)
-    else if (constraints.length == 1) Some(constraints.head).filter(_.isValid)
+    else if (constraints.lengthCompare(1) == 0) Some(constraints.head).filter(_.isValid)
     else {
       val intervals = constraints.map(_.interval)
 
@@ -85,7 +81,18 @@ object VersionConstraint {
         }
 
       val constraintOpt = intervalOpt.map { interval =>
-        val preferreds = constraints.flatMap(_.preferred)
+        val preferreds = {
+          val allPreferred = constraints.flatMap(_.preferred)
+          interval.from match {
+            case Some(from) =>
+              allPreferred.filter { v =>
+                val cmp = from.compare(v)
+                cmp < 0 || (cmp == 0 && interval.fromIncluded)
+              }
+            case None =>
+              allPreferred
+          }
+        }
         val latests = constraints.flatMap(_.latest)
         from(
           interval,
@@ -100,33 +107,33 @@ object VersionConstraint {
   // 1. sort constraints in ascending order.
   // 2. from the right, merge them two-by-two with the merge method above
   // 3. return the last successful merge
-  def relaxedMerge(constraints: VersionConstraint*): VersionConstraint = {
-
-    @tailrec
-    def mergeByTwo(head: VersionConstraint, rest: List[VersionConstraint]): VersionConstraint =
-      rest match {
-        case next :: xs =>
-          merge(head, next) match {
-            case Some(success) => mergeByTwo(success, xs)
-            case _             => head
-          }
-        case Nil => head
-      }
-
-    val cs = constraints.toList
-    cs match {
-      case Nil => VersionConstraint.empty
+  def relaxedMerge(constraints: VersionConstraint*): VersionConstraint =
+    constraints.toList.sorted.reverse match {
+      case Nil      => VersionConstraint.empty
       case h :: Nil => h
-      case _ =>
-        val sorted = cs.sortBy { c =>
-          c.preferred.headOption
-            .orElse(c.interval.from)
-            .getOrElse(Version.zero)
+      case h :: t   =>
+
+        @tailrec
+        def mergeByTwo(head: VersionConstraint, rest: List[VersionConstraint]): VersionConstraint =
+          rest match {
+            case next :: xs =>
+              merge(head, next) match {
+                case Some(success) => mergeByTwo(success, xs)
+                case _             => head
+              }
+            case Nil => head
+          }
+
+        val latestOpt = {
+          val it = constraints.iterator.flatMap(_.latest.iterator)
+          if (it.hasNext) Some(it.max) else None
         }
-        val reversed = sorted.reverse
-        mergeByTwo(reversed.head, reversed.tail)
+
+        val merged = mergeByTwo(h, t)
+
+        if (merged.latest == latestOpt) merged
+        else merged.withLatest(latestOpt)
     }
-  }
 
 
   private[version] def fromPreferred(input: String, version: Version): Eager =
@@ -165,6 +172,9 @@ object VersionConstraint {
         val other = obj.asInstanceOf[VersionConstraint]
         asString == other.asString
       }
+
+    def withLatest(latestOpt: Option[Latest]): VersionConstraint =
+      parsed.withLatest(latestOpt)
   }
   @data class Eager(
     asString: String,
