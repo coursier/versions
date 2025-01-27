@@ -34,9 +34,9 @@ import scala.annotation.tailrec
 
 object Version {
 
-  private val zero0 = Version("0")
+  private val zero0 = Version("")
 
-  def zero: Version = Version("0")
+  def zero: Version = zero0
 
   sealed abstract class Item extends Ordered[Item] {
     def compare(other: Item): Int =
