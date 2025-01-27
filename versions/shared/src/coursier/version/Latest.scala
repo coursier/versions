@@ -1,7 +1,7 @@
 package coursier.version
 
 sealed abstract class Latest(val name: String, private val order: Int) extends Product with Serializable with Ordered[Latest] {
-  final def asString: String = name
+  final def asString: String = s"latest.$name"
 
   def compare(that: Latest): Int =
     order.compare(that.order)
