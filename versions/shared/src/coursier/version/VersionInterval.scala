@@ -89,4 +89,5 @@ import dataclass.data
 
 object VersionInterval {
   val zero = VersionInterval(None, None, fromIncluded = false, toIncluded = false)
+  val empty = VersionInterval(None, Some(Version.zero), fromIncluded = false, toIncluded = false)
 }

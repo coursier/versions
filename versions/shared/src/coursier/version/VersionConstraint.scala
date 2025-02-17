@@ -48,25 +48,26 @@ object VersionConstraint {
   def empty: VersionConstraint =
     empty0
 
-  private def generateString(interval: VersionInterval, preferred: Option[Version], latest: Option[Latest]): String = {
-
-    val nonIntervalPartOpt =
-      if (preferred.isEmpty && latest.isEmpty) None
-      else Some((preferred.iterator.map(_.asString) ++ latest.iterator.map(_.asString)).mkString(";"))
-
-    if (interval == VersionInterval.zero)
-      nonIntervalPartOpt.getOrElse("")
-    else
-      (Iterator(interval.repr) ++ nonIntervalPartOpt.iterator).mkString("&")
-  }
+  private def generateString(interval: VersionInterval, preferred: Option[Version], latest: Option[Latest]): String =
+    if (preferred.isEmpty && latest.isEmpty)
+      if (interval == VersionInterval.empty) ""
+      else interval.repr
+    else {
+      val nonIntervalPart = (preferred.iterator.map(_.asString) ++ latest.iterator.map(_.asString)).mkString(";")
+      if (interval == VersionInterval.zero) nonIntervalPart
+      else s"${interval.repr}&$nonIntervalPart"
+    }
 
   def fromVersion(version: Version): VersionConstraint =
-    Eager(
-      version.repr,
-      VersionInterval.zero,
-      Some(version),
-      None
-    )
+    if (version.repr.isEmpty)
+      empty
+    else
+      Eager(
+        version.repr,
+        VersionInterval.zero,
+        Some(version),
+        None
+      )
 
   def merge(constraints: VersionConstraint*): Option[VersionConstraint] =
     if (constraints.isEmpty) Some(empty)
@@ -137,13 +138,14 @@ object VersionConstraint {
 
 
   private[version] def fromPreferred(input: String, version: Version): Eager =
-    Eager(input, VersionInterval.zero, Some(version), None)
+    if (input.isEmpty) empty0
+    else Eager(input, VersionInterval.zero, Some(version), None)
   private[version] def fromInterval(input: String, interval: VersionInterval): Eager =
     Eager(input, interval, None, None)
   private[version] def fromLatest(input: String, latest: Latest): Eager =
     Eager(input, VersionInterval.zero, None, Some(latest))
 
-  private[version] val empty0 = Eager("", VersionInterval.zero, None, None)
+  private[version] val empty0 = Eager("", VersionInterval.empty, None, None)
 
   private[coursier] val parsedValueAsToString: ThreadLocal[Boolean] = new ThreadLocal[Boolean] {
     override protected def initialValue(): Boolean =

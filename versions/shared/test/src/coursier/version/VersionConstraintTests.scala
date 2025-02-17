@@ -32,6 +32,14 @@ object VersionConstraintTests extends TestSuite {
       }
     }
 
+    test("empty") {
+      val c0 = VersionConstraint("")
+      assert(c0 == VersionConstraint.empty)
+      assert(c0.preferred.isEmpty)
+      assert(!c0.interval.contains(Version("0")))
+      assert(!c0.interval.contains(Version("1")))
+    }
+
     test("interval") {
       test("checkZero") {
         val v103 = Version("1.0.3")
