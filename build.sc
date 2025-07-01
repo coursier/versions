@@ -21,7 +21,7 @@ object DepVersions {
 object Deps {
   def macroParadise = ivy"org.scalamacros:::paradise:2.1.1"
   def pprint = ivy"com.lihaoyi::pprint::0.9.0"
-  def utest = ivy"com.lihaoyi::utest::0.8.5"
+  def utest = ivy"com.lihaoyi::utest::0.8.8"
 }
 
 trait VersionsMima extends Mima {
