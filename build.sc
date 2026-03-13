@@ -15,7 +15,7 @@ object DepVersions {
   def scala213 = "2.13.16"
   def scalaJs = "1.18.1"
 
-  def scala = Seq(scala213, "2.12.20")
+  def scala = Seq(scala213, "2.12.21")
 }
 
 object Deps {
