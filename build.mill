@@ -14,15 +14,15 @@ import java.io.File
 
 object DepVersions {
   def mdoc = "2.3.6"
-  def scala213 = "2.13.16"
-  def scalaJs = "1.18.1"
+  def scala213 = "2.13.18"
+  def scalaJs = "1.20.2"
 
-  def scala = Seq(scala213, "2.12.20")
+  def scala = Seq(scala213, "2.12.21")
 }
 
 object Deps {
   def macroParadise = mvn"org.scalamacros:::paradise:2.1.1"
-  def pprint = mvn"com.lihaoyi::pprint::0.9.0"
+  def pprint = mvn"com.lihaoyi::pprint::0.9.6"
   def utest = mvn"com.lihaoyi::utest::0.8.9"
 }
 
