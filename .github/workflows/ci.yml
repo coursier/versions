@@ -58,7 +58,7 @@ jobs:
       - uses: coursier/setup-action@v2
         with:
           jvm: 21
-      - run: ./mill mill.scalalib.PublishModule/ --sonatypeUri https://s01.oss.sonatype.org/service/local --sonatypeSnapshotUri https://s01.oss.sonatype.org/content/repositories/snapshots
+      - run: ./mill -i mill.scalalib.SonatypeCentralPublishModule/
         env:
           MILL_PGP_SECRET_BASE64: ${{ secrets.PUBLISH_SECRET_KEY }}
           MILL_PGP_PASSPHRASE: ${{ secrets.PUBLISH_SECRET_KEY_PASSWORD }}
