@@ -11,11 +11,11 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0
-    - uses: coursier/cache-action@v6
-    - uses: coursier/setup-action@v1
+    - uses: coursier/cache-action@v8
+    - uses: coursier/setup-action@v2
       with:
         jvm: 21
     - name: Test
@@ -24,11 +24,11 @@ jobs:
   bin-compat:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0
-    - uses: coursier/cache-action@v6
-    - uses: coursier/setup-action@v1
+    - uses: coursier/cache-action@v8
+    - uses: coursier/setup-action@v2
       with:
         jvm: 21
     - name: Check
@@ -37,11 +37,11 @@ jobs:
   readme:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0
-    - uses: coursier/cache-action@v6
-    - uses: coursier/setup-action@v1
+    - uses: coursier/cache-action@v8
+    - uses: coursier/setup-action@v2
       with:
         jvm: 21
     - name: Validate README
@@ -51,14 +51,14 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: coursier/cache-action@v6
-      - uses: coursier/setup-action@v1
+      - uses: coursier/cache-action@v8
+      - uses: coursier/setup-action@v2
         with:
           jvm: 21
-      - run: ./mill mill.scalalib.PublishModule/ --sonatypeUri https://s01.oss.sonatype.org/service/local --sonatypeSnapshotUri https://s01.oss.sonatype.org/content/repositories/snapshots
+      - run: ./mill -i mill.scalalib.SonatypeCentralPublishModule/
         env:
           MILL_PGP_SECRET_BASE64: ${{ secrets.PUBLISH_SECRET_KEY }}
           MILL_PGP_PASSPHRASE: ${{ secrets.PUBLISH_SECRET_KEY_PASSWORD }}
