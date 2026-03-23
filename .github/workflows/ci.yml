@@ -15,7 +15,7 @@ jobs:
       with:
         fetch-depth: 0
     - uses: coursier/cache-action@v8
-    - uses: coursier/setup-action@v2
+    - uses: coursier/setup-action@v3
       with:
         jvm: 21
     - name: Test
@@ -28,7 +28,7 @@ jobs:
       with:
         fetch-depth: 0
     - uses: coursier/cache-action@v8
-    - uses: coursier/setup-action@v2
+    - uses: coursier/setup-action@v3
       with:
         jvm: 21
     - name: Check
@@ -41,7 +41,7 @@ jobs:
       with:
         fetch-depth: 0
     - uses: coursier/cache-action@v8
-    - uses: coursier/setup-action@v2
+    - uses: coursier/setup-action@v3
       with:
         jvm: 21
     - name: Validate README
@@ -55,7 +55,7 @@ jobs:
         with:
           fetch-depth: 0
       - uses: coursier/cache-action@v8
-      - uses: coursier/setup-action@v2
+      - uses: coursier/setup-action@v3
         with:
           jvm: 21
       - run: ./mill -i mill.scalalib.SonatypeCentralPublishModule/
