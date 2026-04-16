@@ -249,17 +249,21 @@ object Version {
   }
 
   @tailrec
-  private def listCompare0(first: Vector[Item], second: Vector[Item]): Int = {
-    if (first.isEmpty && second.isEmpty) 0
-    else if (first.isEmpty) {
-      assert(second.nonEmpty)
-      -second.dropWhile(_.isEmpty).headOption.fold(0)(_.compareToEmpty)
-    } else if (second.isEmpty) {
-      assert(first.nonEmpty)
-      first.dropWhile(_.isEmpty).headOption.fold(0)(_.compareToEmpty)
+  private def listCompare0(first: Vector[Item], second: Vector[Item], idx: Int = 0): Int = {
+    val firstDone = idx >= first.length
+    val secondDone = idx >= second.length
+    if (firstDone && secondDone) 0
+    else if (firstDone) {
+      var i = idx
+      while (i < second.length && second(i).isEmpty) i += 1
+      if (i < second.length) -second(i).compareToEmpty else 0
+    } else if (secondDone) {
+      var i = idx
+      while (i < first.length && first(i).isEmpty) i += 1
+      if (i < first.length) first(i).compareToEmpty else 0
     } else {
-      val rel = first.head.compare(second.head)
-      if (rel == 0) listCompare0(first.tail, second.tail)
+      val rel = first(idx).compare(second(idx))
+      if (rel == 0) listCompare0(first, second, idx + 1)
       else rel
     }
   }
