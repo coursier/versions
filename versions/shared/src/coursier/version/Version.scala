@@ -236,9 +236,9 @@ object Version {
       val (before, after) = xs.splitAt(original)
       before ++ Vector.fill(next - original)(empty) ++ after
     }
-    val num1 = first.takeWhile(isNumericOrMinMax)
-    val num2 = second.takeWhile(isNumericOrMinMax)
-    (num1.size, num2.size) match {
+    val num1 = first.prefixLength(isNumericOrMinMax)
+    val num2 = second.prefixLength(isNumericOrMinMax)
+    (num1, num2) match {
       case (x, y) if x == y =>
         listCompare0(first, second)
       case (x, y) if x > y  =>
