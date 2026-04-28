@@ -69,7 +69,9 @@ object VersionConstraint {
         None
       )
 
-  def merge(constraints: VersionConstraint*): Option[VersionConstraint] =
+  def merge(constraints0: VersionConstraint*): Option[VersionConstraint] = {
+    // Initial pass to filter exact duplicates
+    val constraints = constraints0.distinct
     if (constraints.isEmpty) Some(empty)
     else if (constraints.lengthCompare(1) == 0) Some(constraints.head).filter(_.isValid)
     else {
@@ -104,6 +106,7 @@ object VersionConstraint {
 
       constraintOpt.filter(_.isValid)
     }
+  }
 
   // 1. sort constraints in ascending order.
   // 2. from the right, merge them two-by-two with the merge method above

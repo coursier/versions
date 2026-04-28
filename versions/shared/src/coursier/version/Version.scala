@@ -19,7 +19,10 @@ import scala.annotation.tailrec
       items0 = Version.items(repr)
     items0
   }
-  def compare(other: Version) = Version.listCompare(items, other.items)
+  def compare(other: Version) = {
+    if (repr == other.repr) 0 // fast path
+    else Version.listCompare(items, other.items)
+  }
   def isEmpty = items.forall(_.isEmpty)
 
   lazy val isStable: Boolean =
