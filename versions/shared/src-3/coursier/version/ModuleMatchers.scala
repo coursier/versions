@@ -1,11 +1,13 @@
 package coursier.version
 
+import com.lihaoyi.unroll
+
 // Adapted from https://github.com/coursier/coursier/blob/f0b10fb1744e5bdf94bf17857dfb3cb19fda2e5b/modules/coursier/shared/src/main/scala/coursier/util/ModuleMatchers.scala
 
 case class ModuleMatchers(
   exclude: Set[ModuleMatcher],
   include: Set[ModuleMatcher] = Set(),
-  includeByDefault: Boolean = true
+  @unroll includeByDefault: Boolean = true
 ) {
 
   // If modules are included by default:

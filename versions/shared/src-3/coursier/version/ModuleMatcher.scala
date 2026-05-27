@@ -2,6 +2,7 @@ package coursier.version
 
 import java.util.regex.Pattern
 
+import com.lihaoyi.unroll
 import scala.annotation.tailrec
 import scala.util.matching.Regex
 
@@ -10,7 +11,7 @@ import scala.util.matching.Regex
 case class ModuleMatcher(
   organizationMatcher: String,
   nameMatcher: String,
-  attributeMatchers: Map[String, String] = Map.empty
+  @unroll attributeMatchers: Map[String, String] = Map.empty
 ) {
 
   import ModuleMatcher.blobToPattern

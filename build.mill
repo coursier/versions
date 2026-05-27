@@ -15,7 +15,7 @@ import java.io.File
 object DepVersions {
   def mdoc = "2.3.6"
   def scala213 = "2.13.18"
-  def scala3 = "3.3.7"
+  def scala3 = "3.7.4"
   def scalaJs = "1.20.2"
 
   def scala = Seq(scala213, "2.12.21", scala3)
@@ -25,6 +25,7 @@ object Deps {
   def macroParadise = mvn"org.scalamacros:::paradise:2.1.1"
   def pprint = mvn"com.lihaoyi::pprint::0.9.6"
   def utest = mvn"com.lihaoyi::utest::0.8.9"
+  def unrollAnnotation = mvn"com.lihaoyi:::unroll-annotation:0.3.0"
 }
 
 trait VersionsMima extends Mima with PublishModule {
@@ -123,6 +124,14 @@ trait Versions extends Cross.Module[String] with ScalaModule with VersionsPublis
     val sv = scalaVersion()
     if (sv.startsWith("3.")) Seq.empty
     else Seq(mvn"io.github.alexarchambault::data-class:0.2.7")
+  }
+
+  def mvnDeps = Task {
+    val sv = scalaVersion()
+    val unrollDeps =
+      if (sv.startsWith("3.")) Seq(Deps.unrollAnnotation)
+      else Seq.empty
+    super.mvnDeps() ++ unrollDeps
   }
 
   def mimaBinaryIssueFilters = super.mimaBinaryIssueFilters() ++ Seq(
