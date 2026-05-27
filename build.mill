@@ -15,9 +15,10 @@ import java.io.File
 object DepVersions {
   def mdoc = "2.3.6"
   def scala213 = "2.13.18"
+  def scala3 = "3.3.7"
   def scalaJs = "1.20.2"
 
-  def scala = Seq(scala213, "2.12.21")
+  def scala = Seq(scala213, "2.12.21", scala3)
 }
 
 object Deps {
@@ -105,19 +106,24 @@ trait Versions extends Cross.Module[String] with ScalaModule with VersionsPublis
     val scala213Opts =
       if (sv.startsWith("2.13.")) Seq("-Ymacro-annotations")
       else Nil
-    super.scalacOptions() ++ scala213Opts ++ Seq(
-      "-deprecation",
-      "--release",
-      "8"
-    )
+    val releaseOpts =
+      if (sv.startsWith("3.")) Seq("-release", "8")
+      else Seq("--release", "8")
+    super.scalacOptions() ++ scala213Opts ++ Seq("-deprecation") ++ releaseOpts
   }
   def sources = Task {
-    super.sources() ++ Seq(versions.shared.sources())
+    val sv = scalaVersion()
+    val versionSpecific =
+      if (sv.startsWith("3.")) versions.shared.sources3()
+      else versions.shared.sources2()
+    super.sources() ++ Seq(versions.shared.sources(), versionSpecific)
   }
 
-  def compileMvnDeps = Seq(
-    mvn"io.github.alexarchambault::data-class:0.2.7"
-  )
+  def compileMvnDeps = Task {
+    val sv = scalaVersion()
+    if (sv.startsWith("3.")) Seq.empty
+    else Seq(mvn"io.github.alexarchambault::data-class:0.2.7")
+  }
 
   def mimaBinaryIssueFilters = super.mimaBinaryIssueFilters() ++ Seq(
     // Additional abstract method on *sealed* trait
@@ -157,6 +163,8 @@ trait VersionsJs extends Versions with ScalaJSModule {
 object versions extends Module {
   object shared extends Module {
     def sources = Task.Source("src")
+    def sources2 = Task.Source("src-2")
+    def sources3 = Task.Source("src-3")
     def testSources = Task.Source("test/src")
   }
   object jvm extends Cross[VersionsJvm](DepVersions.scala)

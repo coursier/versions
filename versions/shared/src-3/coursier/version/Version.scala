@@ -1,0 +1,273 @@
+package coursier.version
+
+import coursier.version.internal.Compatibility._
+
+import scala.annotation.tailrec
+
+/**
+ *  Used internally by Resolver.
+ *
+ *  Same kind of ordering as aether-util/src/main/java/org/eclipse/aether/util/version/GenericVersion.java
+ */
+case class Version(repr: String) extends Ordered[Version] {
+  def asString: String = repr
+  private var items0: Vector[Version.Item] = null
+  def items: Vector[Version.Item] = {
+    // no need to guard against concurrent computations, this is not too expensive to compute
+    if (items0 == null)
+      items0 = Version.items(repr)
+    items0
+  }
+  def compare(other: Version) = {
+    if (repr == other.repr) 0 // fast path
+    else Version.listCompare(items, other.items)
+  }
+  def isEmpty = items.forall(_.isEmpty)
+
+  lazy val isStable: Boolean =
+    !repr.endsWith("SNAPSHOT") &&
+    !repr.exists(_.isLetter) &&
+    repr
+      .split(Array('.', '-'))
+      .forall(_.lengthCompare(5) <= 0)
+
+  override lazy val hashCode: Int = repr.hashCode()
+}
+
+object Version {
+
+  private val zero0 = Version("")
+
+  def zero: Version = zero0
+
+  sealed abstract class Item extends Ordered[Item] {
+    def compare(other: Item): Int =
+      (this, other) match {
+        case (a: Number, b: Number) => a.value.compare(b.value)
+        case (a: BigNumber, b: BigNumber) => a.value.compare(b.value)
+        case (a: Number, b: BigNumber) => -b.value.compare(a.value)
+        case (a: BigNumber, b: Number) => a.value.compare(b.value)
+        case (a: Tag, b: Tag) => a.compareTag(b)
+        case _ =>
+          val rel0 = compareToEmpty
+          val rel1 = other.compareToEmpty
+
+          if (rel0 == rel1) order.compare(other.order)
+          else rel0.compare(rel1)
+      }
+
+    final def isNumber: Boolean =
+      this match {
+        case _: Numeric => true
+        case _ => false
+      }
+
+    def order: Int
+    def isEmpty: Boolean = compareToEmpty == 0
+    def compareToEmpty: Int = 1
+  }
+
+  sealed abstract class Numeric extends Item {
+    def repr: String
+    def next: Numeric
+  }
+  case class Number(value: Int) extends Numeric {
+    val order = 0
+    def next: Number = Number(value + 1)
+    def repr: String = value.toString
+    override def compareToEmpty = value.compare(0)
+  }
+  case class BigNumber(value: BigInt) extends Numeric {
+    val order = 0
+    def next: BigNumber = BigNumber(value + 1)
+    def repr: String = value.toString
+    override def compareToEmpty = value.compare(0)
+  }
+
+  /**
+   * Tags represent prerelease tags, typically appearing after - for SemVer compatible versions.
+   */
+  case class Tag(value: String) extends Item {
+    val order = -1
+    private val otherLevel = -5
+    lazy val level: Int =
+      value match {
+        case "ga" | "final" | "" => 0 // 1.0.0 equivalent
+        case "snapshot"          => -1
+        case "rc" | "cr"         => -2
+        case "beta" | "b"        => -3
+        case "alpha" | "a"       => -4
+        case "dev"               => -6
+        case "sp" | "bin"        => 1
+        case _                   => otherLevel
+      }
+
+    override def compareToEmpty = level.compare(0)
+    def isPreRelease: Boolean = level < 0
+    def compareTag(other: Tag): Int = {
+      val levelComp = level.compare(other.level)
+      if (levelComp == 0 && level == otherLevel) value.compareToIgnoreCase(other.value)
+      else levelComp
+    }
+  }
+  case class BuildMetadata(value: String) extends Item {
+    val order = 1
+    override def compareToEmpty = 0
+  }
+
+  case object Min extends Item {
+    val order = -8
+    override def compareToEmpty = -1
+  }
+  case object Max extends Item {
+    val order = 8
+  }
+
+  val empty = Number(0)
+
+  object Tokenizer {
+    sealed abstract class Separator
+    case object Dot extends Separator
+    case object Hyphen extends Separator
+    case object Underscore extends Separator
+    case object Plus extends Separator
+    case object None extends Separator
+
+    def apply(str: String): (Item, LazyList[(Separator, Item)]) = {
+      def parseItem(s: LazyList[Char], prev: Option[Separator]): (Item, LazyList[Char]) = {
+        if (s.isEmpty) (empty, s)
+        else if (s.head.isDigit) {
+          def digits(b: StringBuilder, s: LazyList[Char]): (String, LazyList[Char]) =
+            if (s.isEmpty || !s.head.isDigit) (b.result(), s)
+            else digits(b += s.head, s.tail)
+
+          val (digits0, rem) = digits(new StringBuilder, s)
+          val item =
+            if (digits0.length >= 10) BigNumber(BigInt(digits0))
+            else Number(digits0.toInt)
+
+          (item, rem)
+        } else if (s.head.letter) {
+          def letters(b: StringBuilder, s: LazyList[Char]): (String, LazyList[Char]) =
+            if (s.isEmpty || !s.head.letter)
+              (b.result().toLowerCase, s) // not specifying a Locale (error with scala js)
+            else
+              letters(b += s.head, s.tail)
+
+          val (letters0, rem) = letters(new StringBuilder, s)
+          val item = letters0 match {
+            case "x" if prev == Some(Dot) => Max
+            case "min" => Min
+            case "max" => Max
+            case _     => Tag(letters0)
+          }
+          (item, rem)
+        } else {
+          val (sep, _) = parseSeparator(s)
+          (prev, sep) match {
+            case (_, None) =>
+              def other(b: StringBuilder, s: LazyList[Char]): (String, LazyList[Char]) =
+                if (s.isEmpty || s.head.isLetterOrDigit || parseSeparator(s)._1 != None)
+                  (b.result().toLowerCase, s)  // not specifying a Locale (error with scala js)
+                else
+                  other(b += s.head, s.tail)
+
+              val (item, rem0) = other(new StringBuilder, s)
+              // treat .* as .max
+              if (prev == Some(Dot) && item == "*") (Max, rem0)
+              else (Tag(item), rem0)
+            // treat .+ as .max
+            case (Some(Dot), Plus) => (Max, s)
+            case _                 => (empty, s)
+          }
+        }
+      }
+
+      def parseSeparator(s: LazyList[Char]): (Separator, LazyList[Char]) = {
+        assert(s.nonEmpty)
+
+        s.head match {
+          case '.' => (Dot, s.tail)
+          case '-' => (Hyphen, s.tail)
+          case '_' => (Underscore, s.tail)
+          case '+' => (Plus, s.tail)
+          case _ => (None, s)
+        }
+      }
+
+      def helper(s: LazyList[Char]): LazyList[(Separator, Item)] = {
+        if (s.isEmpty) LazyList()
+        else {
+          val (sep, rem0) = parseSeparator(s)
+          sep match {
+            case Plus =>
+              LazyList((sep, BuildMetadata(rem0.mkString)))
+            case _ =>
+              val (item, rem) = parseItem(rem0, Some(sep))
+              (sep, item) #:: helper(rem)
+          }
+        }
+      }
+
+      val (first, rem) = parseItem(LazyList.from(str), scala.None)
+      (first, helper(rem))
+    }
+  }
+
+  def isNumeric(item: Item) = item match { case _: Numeric => true; case _ => false }
+  private def isNumericOrMinMax(item: Item): Boolean =
+    item match {
+      case _: Numeric | Min | Max => true
+      case _ => false
+    }
+  def isBuildMetadata(item: Item) = item match { case _: BuildMetadata => true; case _ => false }
+
+  def items(repr: String): Vector[Item] = {
+    val (first, tokens) = Tokenizer(repr)
+    first +: tokens.toVector.map(_._2)
+  }
+
+  // before comparing two versions pad the number parts to the equal number of digits
+  // for example, 1-ga, and 1.0.0 comparison will be adjusted first to 1.0.0-ga and 1.0.0.
+  def listCompare(first0: Vector[Item], second0: Vector[Item]): Int = {
+    // Semver § 10: two versions that differ only in the build metadata, have the same precedence.
+    val first = first0.filterNot(isBuildMetadata)
+    val second = second0.filterNot(isBuildMetadata)
+
+    def padNum(xs: Vector[Item], original: Int, next: Int): Vector[Item] = {
+      val (before, after) = xs.splitAt(original)
+      before ++ Vector.fill(next - original)(empty) ++ after
+    }
+    val num1 = first.prefixLength(isNumericOrMinMax)
+    val num2 = second.prefixLength(isNumericOrMinMax)
+    (num1, num2) match {
+      case (x, y) if x == y =>
+        listCompare0(first, second)
+      case (x, y) if x > y  =>
+        listCompare0(first, padNum(second, y, x))
+      case (x, y) if x < y  =>
+        listCompare0(padNum(first, x, y), second)
+    }
+  }
+
+  @tailrec
+  private def listCompare0(first: Vector[Item], second: Vector[Item], idx: Int = 0): Int = {
+    val firstDone = idx >= first.length
+    val secondDone = idx >= second.length
+    if (firstDone && secondDone) 0
+    else if (firstDone) {
+      var i = idx
+      while (i < second.length && second(i).isEmpty) i += 1
+      if (i < second.length) -second(i).compareToEmpty else 0
+    } else if (secondDone) {
+      var i = idx
+      while (i < first.length && first(i).isEmpty) i += 1
+      if (i < first.length) first(i).compareToEmpty else 0
+    } else {
+      val rel = first(idx).compare(second(idx))
+      if (rel == 0) listCompare0(first, second, idx + 1)
+      else rel
+    }
+  }
+
+}
