@@ -116,7 +116,7 @@ trait Versions extends Cross.Module[String] with ScalaModule with VersionsPublis
   }
 
   def compileMvnDeps = Seq(
-    mvn"io.github.alexarchambault::data-class:0.2.7"
+    mvn"io.github.alexarchambault::data-class:0.2.8"
   )
 
   def mimaBinaryIssueFilters = super.mimaBinaryIssueFilters() ++ Seq(
