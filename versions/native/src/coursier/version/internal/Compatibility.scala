@@ -7,7 +7,4 @@ object Compatibility {
     def letterOrDigit = c.isLetterOrDigit
   }
 
-  // unused, kept for binary compatibility
-  def regexLookbehind: String = "<="
-
 }

@@ -9,6 +9,7 @@ object Compatibility {
     def letterOrDigit: Boolean = between(c, '0', '9') || letter
   }
 
+  // unused, kept for binary compatibility
   def regexLookbehind: String = ":"
 
 }

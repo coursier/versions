@@ -7,6 +7,7 @@ import mill.*
 import mill.api.BuildCtx
 import mill.scalajslib.*
 import mill.scalalib.*
+import mill.scalanativelib.*
 import mill.scalalib.publish.*
 import mill.util.VcsVersion
 
@@ -17,6 +18,7 @@ object DepVersions {
   def scala213 = "2.13.18"
   def scala3 = "3.3.8"
   def scalaJs = "1.22.0"
+  def scalaNative = "0.5.12"
 
   def scala = Seq(scala213, "2.12.21", scala3)
 }
@@ -226,6 +228,38 @@ trait VersionsJs extends Versions with ScalaJSModule {
   }
 }
 
+trait VersionsNative extends Versions with ScalaNativeModule {
+  def scalaNativeVersion = DepVersions.scalaNative
+
+  def mimaPreviousVersions = Task {
+    import _root_.coursier.version.Version
+    val cutOff = Version("0.6.0")
+    super.mimaPreviousVersions()
+      .map(Version(_))
+      .filter(_ >= cutOff)
+      .map(_.repr)
+  }
+
+  // no Scala Native artifacts published before 0.6.0, so unlike on the JVM and on Scala.js,
+  // there are no Scala 2.13 ones for the Scala 3 module to fall back on
+  def mimaPreviousArtifacts = Task {
+    mimaPreviousVersions().distinct.map(version =>
+      mvn"${pomSettings().organization}:${artifactId()}:$version"
+    )
+  }
+
+  object test extends ScalaNativeTests {
+    def mvnDeps = super.mvnDeps() ++ Seq(
+      Deps.pprint,
+      Deps.utest
+    )
+    def testFramework = "utest.runner.Framework"
+    def sources = Task {
+      super.sources() ++ Seq(versions.shared.testSources())
+    }
+  }
+}
+
 object versions extends Module {
   object shared extends Module {
     def sources = Task.Source("src")
@@ -235,6 +269,7 @@ object versions extends Module {
   }
   object jvm extends Cross[VersionsJvm](DepVersions.scala)
   object js extends Cross[VersionsJs](DepVersions.scala)
+  object native extends Cross[VersionsNative](DepVersions.scala)
 }
 
 
