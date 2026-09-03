@@ -1,6 +1,5 @@
 package coursier.version
 
-import dataclass.data
 import coursier.version.internal.Compatibility._
 
 import scala.annotation.tailrec
@@ -10,7 +9,7 @@ import scala.annotation.tailrec
  *
  *  Same kind of ordering as aether-util/src/main/java/org/eclipse/aether/util/version/GenericVersion.java
  */
-@data class Version(repr: String) extends Ordered[Version] {
+case class Version(repr: String) extends Ordered[Version] {
   def asString: String = repr
   private var items0: Vector[Version.Item] = null
   def items: Vector[Version.Item] = {
@@ -24,6 +23,9 @@ import scala.annotation.tailrec
     else Version.listCompare(items, other.items)
   }
   def isEmpty = items.forall(_.isEmpty)
+
+  def withRepr(repr: String): Version =
+    copy(repr = repr)
 
   lazy val isStable: Boolean =
     !repr.endsWith("SNAPSHOT") &&
@@ -72,23 +74,27 @@ object Version {
     def repr: String
     def next: Numeric
   }
-  @data class Number(value: Int) extends Numeric {
+  case class Number(value: Int) extends Numeric {
     val order = 0
     def next: Number = Number(value + 1)
     def repr: String = value.toString
     override def compareToEmpty = value.compare(0)
+    def withValue(value: Int): Number =
+      copy(value = value)
   }
-  @data class BigNumber(value: BigInt) extends Numeric {
+  case class BigNumber(value: BigInt) extends Numeric {
     val order = 0
     def next: BigNumber = BigNumber(value + 1)
     def repr: String = value.toString
     override def compareToEmpty = value.compare(0)
+    def withValue(value: BigInt): BigNumber =
+      copy(value = value)
   }
 
   /**
    * Tags represent prerelease tags, typically appearing after - for SemVer compatible versions.
    */
-  @data class Tag(value: String) extends Item {
+  case class Tag(value: String) extends Item {
     val order = -1
     private val otherLevel = -5
     lazy val level: Int =
@@ -110,10 +116,14 @@ object Version {
       if (levelComp == 0 && level == otherLevel) value.compareToIgnoreCase(other.value)
       else levelComp
     }
+    def withValue(value: String): Tag =
+      copy(value = value)
   }
-  @data class BuildMetadata(value: String) extends Item {
+  case class BuildMetadata(value: String) extends Item {
     val order = 1
     override def compareToEmpty = 0
+    def withValue(value: String): BuildMetadata =
+      copy(value = value)
   }
 
   case object Min extends Item {

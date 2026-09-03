@@ -1,15 +1,18 @@
 package coursier.version
 
-import dataclass._
-
 // Adapted from https://github.com/coursier/coursier/blob/f0b10fb1744e5bdf94bf17857dfb3cb19fda2e5b/modules/coursier/shared/src/main/scala/coursier/util/ModuleMatchers.scala
 
-@data class ModuleMatchers(
+case class ModuleMatchers(
   exclude: Set[ModuleMatcher],
   include: Set[ModuleMatcher] = Set(),
-  @since
   includeByDefault: Boolean = true
 ) {
+
+  def this(exclude: Set[ModuleMatcher]) =
+    this(exclude, Set.empty, includeByDefault = true)
+
+  def this(exclude: Set[ModuleMatcher], include: Set[ModuleMatcher]) =
+    this(exclude, include, includeByDefault = true)
 
   // If modules are included by default:
   // Those matched by anything in exclude are excluded, but for those also matched by something in include.
@@ -27,11 +30,26 @@ import dataclass._
       include.exists(_.matches(organization, name, attributes)) &&
         !exclude.exists(_.matches(organization, name, attributes))
 
+  def withExclude(exclude: Set[ModuleMatcher]): ModuleMatchers =
+    copy(exclude = exclude)
+
+  def withInclude(include: Set[ModuleMatcher]): ModuleMatchers =
+    copy(include = include)
+
+  def withIncludeByDefault(includeByDefault: Boolean): ModuleMatchers =
+    copy(includeByDefault = includeByDefault)
+
 }
 
 object ModuleMatchers {
+  def apply(exclude: Set[ModuleMatcher]): ModuleMatchers =
+    new ModuleMatchers(exclude)
+
+  def apply(exclude: Set[ModuleMatcher], include: Set[ModuleMatcher]): ModuleMatchers =
+    new ModuleMatchers(exclude, include)
+
   def all: ModuleMatchers =
-    ModuleMatchers(Set.empty, Set.empty)
+    ModuleMatchers(Set.empty[ModuleMatcher], Set.empty[ModuleMatcher])
   def only(organization: String, name: String): ModuleMatchers =
     only(organization, name, Map.empty)
   def only(organization: String, name: String, attributes: Map[String, String]): ModuleMatchers =

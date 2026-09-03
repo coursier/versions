@@ -1,8 +1,6 @@
 package coursier.version
 
-import dataclass.data
-
-@data class VersionInterval(
+case class VersionInterval(
   from: Option[Version],
   to: Option[Version],
   fromIncluded: Boolean,
@@ -34,6 +32,18 @@ import dataclass.data
 
     fromCond && toCond
   }
+
+  def withFrom(from: Option[Version]): VersionInterval =
+    copy(from = from)
+
+  def withTo(to: Option[Version]): VersionInterval =
+    copy(to = to)
+
+  def withFromIncluded(fromIncluded: Boolean): VersionInterval =
+    copy(fromIncluded = fromIncluded)
+
+  def withToIncluded(toIncluded: Boolean): VersionInterval =
+    copy(toIncluded = toIncluded)
 
   def merge(other: VersionInterval): Option[VersionInterval] = {
     val (newFrom, newFromIncluded) =
