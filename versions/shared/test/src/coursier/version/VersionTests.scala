@@ -424,11 +424,67 @@ object VersionTests extends TestSuite {
       assert(!Version("1.2.3-M2").isStable)
       assert(!Version("1.2.3-RC1").isStable)
     }
-  }
 
+    // Examples from https://get-coursier.io/docs/other-version-handling.html#ordering
+    // Several of them don't match this implementation, see orderingDocExamplesDivergences below.
     test("orderingDocExamples") {
-      assert(compare("1.0.1", "1.0.1e") < 0)
-      assert(compare("1.0.1.0", "1.0.1e") < 0)
+      // "1.0.1 has the same ordering as 1.0-1 (actual separators don't matter)"
+      assert(compare("1.0.1", "1.0-1") == 0)
+
+      // "1.0.1e goes before 1.0.1.2 (literal e goes before non-zero numeric item 2)"
+      assert(compare("1.0.1e", "1.0.1.2") < 0)
+
+      // "1.1.0 has same ordering as 1.1 (zero or empty items are equivalent)"
+      assert(compare("1.1.0", "1.1") == 0)
+
+      // "1.1-alpha goes before 1.1-rc (qualifier alpha before rc)"
+      assert(compare("1.1-alpha", "1.1-rc") < 0)
+
+      // "1.1-rc goes before 1.1-final (qualifier rc before final)"
+      assert(compare("1.1-rc", "1.1-final") < 0)
+
+      // "1.1a1 is equivalent to 1.1-alpha-1"
+      assert(compare("1.1a1", "1.1-alpha-1") == 0)
+
+      // "both 1.0-alpha-1 and 1.0.0-alpha-1 go before 1-beta, 1.0-beta, and 1.0.0-beta"
+      assert(compare("1.0-alpha-1", "1-beta") < 0)
+      assert(compare("1.0-alpha-1", "1.0-beta") < 0)
+      assert(compare("1.0-alpha-1", "1.0.0-beta") < 0)
+      assert(compare("1.0.0-alpha-1", "1-beta") < 0)
+      assert(compare("1.0.0-alpha-1", "1.0-beta") < 0)
+      assert(compare("1.0.0-alpha-1", "1.0.0-beta") < 0)
+    }
+
+    // The coursier documentation describes the Maven / Aether ordering, but this
+    // implementation deliberately diverges from it on the points below. Those assertions
+    // pin the actual behaviour down, so that the divergences stay intentional.
+    test("orderingDocExamplesDivergences") {
+
+      // The doc says "1.0.1 or 1.0.1.0 goes before 1.0.1e (literal e goes after empty / zero
+      // items)", and likewise "1.1 goes before 1.1a". Here, unknown literals are treated as
+      // pre-release qualifiers instead (Version.Tag.isPreRelease), so that versions like
+      // 1.0-MF, 1.0-X1 or 1.2.3-g12eafd3, which are common in the Scala ecosystem, sort
+      // before the release they lead to, rather than after it.
+      assert(compare("1.0.1", "1.0.1e") > 0)
+      assert(compare("1.0.1.0", "1.0.1e") > 0)
+      assert(compare("1.1", "1.1a") > 0)
+
+      // For the same reason, an unknown literal sorts before the known qualifiers, rather
+      // than after them, so 1.1a (a is read as alpha, see below) goes after 1.1-foo.
+      assert(compare("1.1a", "1.1-foo") > 0)
+
+      // milestone / m are not known qualifiers here, so they sort as unknown literals,
+      // below beta, rather than between beta and rc as the doc states.
+      assert(compare("1-milestone", "1-beta") < 0)
+      assert(compare("1-milestone", "1-rc") < 0)
+
+      // The doc says "1.1-final goes before 1.1 (qualifier final before empty item)", but
+      // ga / final are equivalent to the empty item here (like in Maven).
+      assert(compare("1.1-final", "1.1") == 0)
+
+      // Single char qualifiers are recognized whether or not they are directly followed by
+      // a digit, so, unlike what the doc states, 1.1a-1 is equivalent to 1.1-alpha-1.
+      assert(compare("1.1a-1", "1.1-alpha-1") == 0)
     }
   }
 
