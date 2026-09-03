@@ -7,6 +7,7 @@ import mill.*
 import mill.api.BuildCtx
 import mill.scalajslib.*
 import mill.scalalib.*
+import mill.scalanativelib.*
 import mill.scalalib.publish.*
 import mill.util.VcsVersion
 
@@ -17,7 +18,7 @@ object DepVersions {
   def scala213 = "2.13.18"
   def scala3 = "3.3.8"
   def scalaJs = "1.22.0"
-  def scalaNative = "0.5.6"
+  def scalaNative = "0.5.12"
 
   def scala = Seq(scala213, "2.12.21", scala3)
 }
@@ -230,32 +231,17 @@ trait VersionsJs extends Versions with ScalaJSModule {
 trait VersionsNative extends Versions with ScalaNativeModule {
   def scalaNativeVersion = DepVersions.scalaNative
 
-  def mimaPreviousVersions = T {
-    val cutOff = coursier.core.Version("0.3.3")
-    super.mimaPreviousVersions().filter { v =>
-      coursier.core.Version(v) > cutOff
-    }
-  }
-
-  // required if mimaPreviousVersions is empty
-  def mimaPreviousArtifacts = T {
-    val versions = mimaPreviousVersions().distinct
-    mill.api.Result.Success(
-      Agg.from(
-        versions.map(version =>
-          ivy"${pomSettings().organization}:${artifactId()}:$version"
-        )
-      )
-    )
-  }
+  // no Scala Native artifacts published before, nothing to check binary compatibility against
+  def mimaPreviousVersions = Task { Seq.empty[String] }
 
   object test extends ScalaNativeTests {
-    def ivyDeps = super.ivyDeps() ++ Agg(
+    def mvnDeps = super.mvnDeps() ++ Seq(
+      Deps.pprint,
       Deps.utest
     )
     def testFramework = "utest.runner.Framework"
-    def sources = T.sources {
-      super.sources() ++ testSources()
+    def sources = Task {
+      super.sources() ++ Seq(versions.shared.testSources())
     }
   }
 }

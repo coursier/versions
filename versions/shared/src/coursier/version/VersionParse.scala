@@ -1,7 +1,5 @@
 package coursier.version
 
-import java.util.regex.Pattern.quote
-
 import coursier.version.internal.Compatibility._
 
 object VersionParse {
@@ -59,17 +57,32 @@ object VersionParse {
     } yield itv
   }
 
-  private lazy val multiVersionIntervalSplit = ("(?<thing>" + regexLookbehind + "[" + "\\]\\)" + "]),(?<a>=[" + "\\(\\[" + "])").r
+  private def isIntervalStart(c: Char): Boolean = c == '[' || c == '('
+  private def isIntervalEnd(c: Char): Boolean = c == ']' || c == ')'
+
+  /** Index of the first char of the last interval of `s`, that is the index right after the last
+    * ',' preceded by ']' or ')' and followed by '[' or '(' - `0` if there's no such ','.
+    */
+  private def lastIntervalStart(s: String): Int = {
+    var idx = s.length - 2
+    var res = 0
+    while (idx >= 1 && res == 0) {
+      if (s.charAt(idx) == ',' && isIntervalEnd(s.charAt(idx - 1)) && isIntervalStart(s.charAt(idx + 1)))
+        res = idx + 1
+      idx -= 1
+    }
+    res
+  }
 
   def multiVersionInterval(s: String): Option[VersionInterval] = {
 
     // TODO Use a full-fledged (fastparsed-based) parser for this and versionInterval above
 
-    val openCount = s.count(c => c == '[' || c == '(')
-    val closeCount = s.count(c => c == ']' || c == ')')
+    val openCount = s.count(isIntervalStart)
+    val closeCount = s.count(isIntervalEnd)
 
     if (openCount == closeCount && openCount >= 1)
-      versionInterval(multiVersionIntervalSplit.split(s).last)
+      versionInterval(s.substring(lastIntervalStart(s)))
     else
       None
   }
