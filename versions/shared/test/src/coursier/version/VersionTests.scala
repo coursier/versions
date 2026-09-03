@@ -426,4 +426,10 @@ object VersionTests extends TestSuite {
     }
   }
 
+    test("orderingDocExamples") {
+      assert(compare("1.0.1", "1.0.1e") < 0)
+      assert(compare("1.0.1.0", "1.0.1e") < 0)
+    }
+  }
+
 }
