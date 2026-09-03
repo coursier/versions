@@ -17,6 +17,7 @@ object DepVersions {
   def scala213 = "2.13.18"
   def scala3 = "3.3.8"
   def scalaJs = "1.22.0"
+  def scalaNative = "0.5.6"
 
   def scala = Seq(scala213, "2.12.21", scala3)
 }
@@ -226,6 +227,39 @@ trait VersionsJs extends Versions with ScalaJSModule {
   }
 }
 
+trait VersionsNative extends Versions with ScalaNativeModule {
+  def scalaNativeVersion = DepVersions.scalaNative
+
+  def mimaPreviousVersions = T {
+    val cutOff = coursier.core.Version("0.3.3")
+    super.mimaPreviousVersions().filter { v =>
+      coursier.core.Version(v) > cutOff
+    }
+  }
+
+  // required if mimaPreviousVersions is empty
+  def mimaPreviousArtifacts = T {
+    val versions = mimaPreviousVersions().distinct
+    mill.api.Result.Success(
+      Agg.from(
+        versions.map(version =>
+          ivy"${pomSettings().organization}:${artifactId()}:$version"
+        )
+      )
+    )
+  }
+
+  object test extends ScalaNativeTests {
+    def ivyDeps = super.ivyDeps() ++ Agg(
+      Deps.utest
+    )
+    def testFramework = "utest.runner.Framework"
+    def sources = T.sources {
+      super.sources() ++ testSources()
+    }
+  }
+}
+
 object versions extends Module {
   object shared extends Module {
     def sources = Task.Source("src")
@@ -235,6 +269,7 @@ object versions extends Module {
   }
   object jvm extends Cross[VersionsJvm](DepVersions.scala)
   object js extends Cross[VersionsJs](DepVersions.scala)
+  object native extends Cross[VersionsNative](DepVersions.scala)
 }
 
 

@@ -59,7 +59,7 @@ object VersionParse {
     } yield itv
   }
 
-  private val multiVersionIntervalSplit = ("(?" + regexLookbehind + "[" + quote("])") + "]),(?=[" + quote("([") + "])").r
+  private lazy val multiVersionIntervalSplit = ("(?" + regexLookbehind + "[" + quote("])") + "]),(?=[" + quote("([") + "])").r
 
   def multiVersionInterval(s: String): Option[VersionInterval] = {
 
