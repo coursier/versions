@@ -21,7 +21,6 @@ object DepVersions {
 }
 
 object Deps {
-  def macroParadise = mvn"org.scalamacros:::paradise:2.1.1"
   def pprint = mvn"com.lihaoyi::pprint::0.9.6"
   def utest = mvn"com.lihaoyi::utest::0.8.9"
 }
@@ -93,19 +92,8 @@ trait VersionsPublishModule extends PublishModule with VersionsMima {
 trait Versions extends Cross.Module[String] with ScalaModule with VersionsPublishModule {
   def artifactName = "versions"
   def scalaVersion = crossValue
-  def scalacPluginMvnDeps = Task {
-    val sv = scalaVersion()
-    val scala212Plugins =
-      if (sv.startsWith("2.12.")) Seq(Deps.macroParadise)
-      else Nil
-    super.scalacPluginMvnDeps() ++ scala212Plugins
-  }
   def scalacOptions = Task {
-    val sv = scalaVersion()
-    val scala213Opts =
-      if (sv.startsWith("2.13.")) Seq("-Ymacro-annotations")
-      else Nil
-    super.scalacOptions() ++ scala213Opts ++ Seq(
+    super.scalacOptions() ++ Seq(
       "-deprecation",
       "--release",
       "8"
@@ -114,10 +102,6 @@ trait Versions extends Cross.Module[String] with ScalaModule with VersionsPublis
   def sources = Task {
     super.sources() ++ Seq(versions.shared.sources())
   }
-
-  def compileMvnDeps = Seq(
-    mvn"io.github.alexarchambault::data-class:0.2.8"
-  )
 
   def mimaBinaryIssueFilters = super.mimaBinaryIssueFilters() ++ Seq(
     // Additional abstract method on *sealed* trait

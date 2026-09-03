@@ -1,7 +1,5 @@
 package coursier.version
 
-import dataclass.data
-
 import scala.annotation.tailrec
 
 sealed abstract class VersionConstraint extends Product with Serializable with Ordered[VersionConstraint] {
@@ -155,7 +153,7 @@ object VersionConstraint {
       false
   }
 
-  @data class Lazy(asString: String) extends VersionConstraint {
+  case class Lazy(asString: String) extends VersionConstraint {
     private var parsed0: Eager = null
     private def parsed = {
       if (parsed0 == null)
@@ -180,13 +178,28 @@ object VersionConstraint {
 
     def withLatest(latestOpt: Option[Latest]): VersionConstraint =
       parsed.withLatest(latestOpt)
+
+    def withAsString(asString: String): Lazy =
+      copy(asString = asString)
   }
-  @data class Eager(
+  case class Eager(
     asString: String,
     interval: VersionInterval,
     preferred: Option[Version],
     latest: Option[Latest]
   ) extends VersionConstraint {
+    def withAsString(asString: String): Eager =
+      copy(asString = asString)
+
+    def withInterval(interval: VersionInterval): Eager =
+      copy(interval = interval)
+
+    def withPreferred(preferred: Option[Version]): Eager =
+      copy(preferred = preferred)
+
+    def withLatest(latestOpt: Option[Latest]): Eager =
+      copy(latest = latestOpt)
+
     override def toString: String =
       if (parsedValueAsToString.get()) asString
       else

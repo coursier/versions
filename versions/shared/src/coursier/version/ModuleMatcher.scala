@@ -2,18 +2,19 @@ package coursier.version
 
 import java.util.regex.Pattern
 
-import dataclass.data
-
 import scala.annotation.tailrec
 import scala.util.matching.Regex
 
 // Adapted from https://github.com/coursier/coursier/blob/876a6604d0cd0c3783ed729f5399549f52a3a385/modules/coursier/shared/src/main/scala/coursier/util/ModuleMatcher.scala
 
-@data class ModuleMatcher(
+case class ModuleMatcher(
   organizationMatcher: String,
   nameMatcher: String,
   attributeMatchers: Map[String, String] = Map.empty
 ) {
+
+  def this(organizationMatcher: String, nameMatcher: String) =
+    this(organizationMatcher, nameMatcher, Map.empty)
 
   import ModuleMatcher.blobToPattern
 
@@ -39,9 +40,21 @@ import scala.util.matching.Regex
           attributes.get(k).exists(p.pattern.matcher(_).matches())
       }
 
+  def withOrganizationMatcher(organizationMatcher: String): ModuleMatcher =
+    copy(organizationMatcher = organizationMatcher)
+
+  def withNameMatcher(nameMatcher: String): ModuleMatcher =
+    copy(nameMatcher = nameMatcher)
+
+  def withAttributeMatchers(attributeMatchers: Map[String, String]): ModuleMatcher =
+    copy(attributeMatchers = attributeMatchers)
+
 }
 
 object ModuleMatcher {
+
+  def apply(organizationMatcher: String, nameMatcher: String): ModuleMatcher =
+    new ModuleMatcher(organizationMatcher, nameMatcher)
 
   def all: ModuleMatcher =
     ModuleMatcher("*", "*")
