@@ -56,6 +56,10 @@ trait VersionsMima extends Mima with PublishModule {
 }
 
 trait VersionsPublishModule extends PublishModule with VersionsMima {
+  // Publish almost empty javadoc JARs (only containing a manifest), rather
+  // than spending time generating actual API documentation
+  def docSources = Task { Seq.empty[PathRef] }
+
   def pomSettings = PomSettings(
     description = artifactName(),
     organization = "io.get-coursier",
