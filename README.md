@@ -58,11 +58,7 @@ The parsing logic is originally based on [Maven / Aether version parsing](https:
 `items` gives the list of elements composing the parsed version, and is later used to compare versions.
 
 The coursier documentation [details](https://get-coursier.io/docs/other-version-handling.html#ordering)
-how versions are compared. Note that this implementation diverges from it on a few points, the
-main one being that unknown literal items are treated as pre-release qualifiers, so that they sort
-*before* the release they lead to (`1.0-MF`, `1.0-X1` or `1.2.3-g12eafd3` all go before `1.0` /
-`1.2.3`) rather than after it. See `orderingDocExamplesDivergences` in `VersionTests` for the
-exhaustive list.
+how versions are compared.
 
 `Version` implements `Ordered[Version]`, so that `Version` instances can be compared together,
 and a sequence of `Version`s can be sorted.
