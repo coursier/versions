@@ -68,12 +68,15 @@ representation, so that sorted collections and hash-based ones agree on which ve
 distinct.
 
 Use `compareSemantic` to compare versions up to that equivalence - it returns `0` for versions
-that only differ by padding, separators, or build metadata. This is the order that decides
-whether a version sits in an interval, or whether two constraints can be reconciled:
+that only differ by padding, separators, build metadata, or a release qualifier like `Final` or
+`GA`. This is the order that decides whether a version sits in an interval, or whether two
+constraints can be reconciled:
 ```scala
 Version("1.0").compare(Version("1.0.0"))
 // res: Int = -2
 Version("1.0").compareSemantic(Version("1.0.0"))
+// res: Int = 0
+Version("1.1.0").compareSemantic(Version("1.1.0.Final"))
 // res: Int = 0
 ```
 

@@ -14,6 +14,9 @@ object VersionTests extends TestSuite {
   def increasing(versions: String*): Boolean =
     versions.iterator.sliding(2).withPartial(false).forall{case Seq(a, b) => compare(a, b) < 0 }
 
+  def increasingTotal(versions: String*): Boolean =
+    versions.iterator.sliding(2).withPartial(false).forall{case Seq(a, b) => compareTotal(a, b) < 0 }
+
 
   val tests = Tests {
 
@@ -216,18 +219,23 @@ object VersionTests extends TestSuite {
       assert(compare("1-rc", "1-cr" ) == 0)
       assert(compare("1-rc", "1-snapshot" ) < 0)
       assert(compare("1-snapshot", "1" ) < 0)
-      // ga, final and sp all denote releases, and go after the empty item, in that order.
-      // None of them is equivalent to another, nor to the empty item.
-      assert(compare("1", "1-ga" ) < 0)
-      assert(compare("1", "1.ga.0.ga" ) < 0)
-      assert(compare("1.0", "1-ga" ) < 0)
-      assert(compare("1", "1-ga.ga" ) < 0)
-      assert(compare("1", "1-ga-ga" ) < 0)
-      assert(compare("A", "A.ga.ga" ) < 0)
-      assert(compare("A", "A-ga-ga" ) < 0)
-      assert(compare("1-ga", "1-final" ) < 0)
+      // ga, final and sp all denote releases, and the total order puts them after the empty
+      // item, in that order, so that no two of them compare equal. ga and final stand for the
+      // absence of a qualifier though, so they don't change what a version means.
+      assert(compareTotal("1", "1-ga" ) < 0)
+      assert(compareTotal("1", "1.ga.0.ga" ) < 0)
+      assert(compareTotal("1.0", "1-ga" ) < 0)
+      assert(compareTotal("1", "1-ga.ga" ) < 0)
+      assert(compareTotal("1", "1-ga-ga" ) < 0)
+      assert(compareTotal("A", "A.ga.ga" ) < 0)
+      assert(compareTotal("A", "A-ga-ga" ) < 0)
+      assert(compareTotal("1-ga", "1-final" ) < 0)
+      assert(compareTotal("1", "1-final" ) < 0)
+      assert(compare("1", "1-ga" ) == 0)
+      assert(compare("1", "1-ga-ga" ) == 0)
+      assert(compare("1-ga", "1-final" ) == 0)
+      // sp is a release of its own, it isn't equivalent to the empty item
       assert(compare("1-final", "1-sp" ) < 0)
-      assert(compare("1", "1-final" ) < 0)
       assert(compare("1", "1-sp" ) < 0)
 
       assert(compare("2.12.4-bin-typelevel-4", "2.12.4" ) > 0)
@@ -350,8 +358,10 @@ object VersionTests extends TestSuite {
     test("qualifierVersusNumberOrdering") {
       assert(compare("1-ga", "1-1" ) < 0)
       assert(compare("1.ga", "1.1" ) < 0)
-      assert(compare("1-ga", "1.0" ) > 0)
-      assert(compare("1.ga", "1.0" ) > 0)
+      // 1-ga and 1.0 mean the same version, only the total order tells them apart
+      assert(compareTotal("1-ga", "1.0" ) > 0)
+      assert(compareTotal("1.ga", "1.0" ) > 0)
+      assert(compare("1-ga", "1.0" ) == 0)
 
       // 1-0-1 has a longer numeric prefix, so 1-ga-1 is padded to 1-0-0-ga-1, and the
       // comparison is settled at the third item, before reaching the ga tag
@@ -455,9 +465,11 @@ object VersionTests extends TestSuite {
       val equivalent = Seq(
         Seq("1", "1.0", "1.0.0", "1.0.0.0", "1.0000000000000", "01", "1-"),
         Seq("1.2", "1.2+foo", "1.2+bar", "1.02"),
-        Seq("1.0-alpha", "1.0.0-alpha", "1.0alpha", "1.0.ALPHA"),
+        // a lone a is a plain literal, not alpha - it only expands when followed by a digit
+        Seq("1.0-alpha", "1.0.0-alpha", "1.0alpha", "1.0.ALPHA", "1.0_alpha"),
         Seq("1.0-rc", "1.0-cr", "1.0.0-rc", "1.0rc", "1.0.RC"),
-        Seq("1.0-m1", "1.0-milestone-1", "1.0m1", "1.0.0-milestone-1")
+        Seq("1.0-m1", "1.0-milestone-1", "1.0m1", "1.0.0-milestone-1"),
+        Seq("1.1.0", "1.1", "1.1.0.Final", "1.1.0.GA", "1.1.0-final", "1.1.0-ga")
       )
 
       test("consistentWithEquals") {
@@ -514,6 +526,24 @@ object VersionTests extends TestSuite {
         assert(compareTotal("2.0.1", "1.3.2") > 0)
       }
 
+      test("releaseQualifiers") {
+        // ga and final stand for the absence of a qualifier, so they don't change
+        // what a version means
+        assert(compare("1.1.0", "1.1.0.Final") == 0)
+        assert(compare("1.1.0", "1.1.0.GA") == 0)
+        assert(compare("1.1.0.GA", "1.1.0.Final") == 0)
+        assert(compare("4.1.100.Final", "4.1.100") == 0)
+
+        // compare still tells them apart, in the documented qualifier order
+        assert(compareTotal("1.1.0", "1.1.0.GA") < 0)
+        assert(compareTotal("1.1.0.GA", "1.1.0.Final") < 0)
+        assert(compareTotal("1.1.0.Final", "1.1.0.sp") < 0)
+
+        // only ga and final are collapsed, sp is a release of its own
+        assert(compare("1.1.0", "1.1.0.sp") < 0)
+        assert(compare("1.1.0-SNAPSHOT", "1.1.0.Final") < 0)
+      }
+
       test("semanticOrderStillWins") {
         // the tie-break only kicks in for versions that compareSemantic considers equal
         assert(compareTotal("1.9", "1.10") < 0)
@@ -553,8 +583,10 @@ object VersionTests extends TestSuite {
       // "1.1-rc goes before 1.1-final (qualifier rc before final)"
       assert(compare("1.1-rc", "1.1-final") < 0)
 
-      // "1.1 goes before 1.1-final (empty item before qualifier final)"
-      assert(compare("1.1", "1.1-final") < 0)
+      // "1.1 goes before 1.1-final (empty item before qualifier final)" - in the total order.
+      // final stands for the absence of a qualifier, so both mean the same version.
+      assert(compareTotal("1.1", "1.1-final") < 0)
+      assert(compare("1.1", "1.1-final") == 0)
 
       // "1.1 goes before 1.1a (empty item before literal a)"
       assert(compare("1.1", "1.1a") < 0)
@@ -584,7 +616,9 @@ object VersionTests extends TestSuite {
     // milestone (or m if directly followed by a digit), cr or rc, snapshot, then the empty
     // item itself, ga, final, sp. They all go before the plain literal items."
     test("orderingDocQualifierList") {
-      assert(increasing(
+      // that list is the total order - ga and final are equivalent to the empty item for
+      // compareSemantic, see the totalOrder tests
+      assert(increasingTotal(
         "1-alpha", "1-beta", "1-milestone", "1-rc", "1-snapshot", "1", "1-ga", "1-final",
         "1-sp", "1-zzz", "1-1"
       ))
