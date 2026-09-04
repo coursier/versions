@@ -213,7 +213,8 @@ object VersionTests extends TestSuite {
       assert(compare("1-alpha1", "1-a1" ) == 0)
       assert(compare("1-alpha", "1-beta" ) < 0)
       assert(compare("1-beta1", "1-b1" ) == 0)
-      assert(compare("1-beta", "1-milestone" ) < 0)
+      assert(compare("1-beta", "1-pre" ) < 0)
+      assert(compare("1-pre", "1-milestone" ) < 0)
       assert(compare("1-milestone1", "1-m1" ) == 0)
       assert(compare("1-milestone", "1-rc" ) < 0)
       assert(compare("1-rc", "1-cr" ) == 0)
@@ -257,6 +258,7 @@ object VersionTests extends TestSuite {
       assert(compare("1-abc", "1-alpha" ) > 0)
       assert(compare("1-abc", "1-beta" ) > 0)
       assert(compare("1-abc", "1-milestone" ) > 0)
+      assert(compare("1-abc", "1-pre" ) > 0)
       assert(compare("1-abc", "1-rc" ) > 0)
       assert(compare("1-abc", "1-snapshot" ) > 0)
       assert(compare("1-abc", "1" ) > 0)
@@ -427,6 +429,9 @@ object VersionTests extends TestSuite {
       // M1 is a milestone, while MF, X1 and a are plain literal items, which sort
       // after 1.0 rather than before it
       assert(increasing( "1.0-alpha1", "1.0-M1", "1.0-RC1", "1.0", "1.0-MF", "1.0-X1", "2.0", "2.0.2"))
+      assert(increasing( "1.0.0-alpha3", "1.0.0-beta3", "1.0.0-pre3", "1.0.0-M3", "1.0.0-RC3", "1.0.0" ))
+      assert(increasing( "1.0.0-pre1", "1.0.0-pre2", "1.0.0-PRE10", "1.0.0" ))
+      assert(increasing( "1.0.0.pre3", "1.0.0" ))
       assert(increasing( "1.0-RC1", "1.0", "1.0a", "1.0-MF", "1.0-X1", "2.0", "2.0.2"))
     }
 
@@ -625,8 +630,10 @@ object VersionTests extends TestSuite {
       // cr and rc are two spellings of the same qualifier, so are m1 and milestone1
       assert(compare("1-cr", "1-rc") == 0)
       assert(compare("1-m1", "1-milestone1") == 0)
-      // dev is a coursier extension, it isn't part of the documented list
+      // dev and pre are coursier extensions, they aren't part of the documented list
       assert(compare("1-dev", "1-alpha") < 0)
+      assert(compare("1-beta", "1-pre") < 0)
+      assert(compare("1-pre", "1-milestone") < 0)
     }
   }
 

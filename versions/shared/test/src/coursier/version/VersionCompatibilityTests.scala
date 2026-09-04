@@ -175,9 +175,11 @@ object VersionCompatibilityTests extends TestSuite {
           "1.2.3-beta2",
           "1.2.3-SNAPSHOT",
           "1.2.3-milestone2",
+          "1.2.3-pre2",
           // well-known markers count as pre-releases wherever they show up
           "1.2.3.RC1",
-          "1.2.3.SNAPSHOT"
+          "1.2.3.SNAPSHOT",
+          "1.2.3.pre2"
         )
         for (compat <- compatibilities; wanted <- preReleases) {
           val compatible = compat.isCompatible(wanted, "1.9.9")
