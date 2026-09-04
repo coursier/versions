@@ -145,6 +145,7 @@ object Version {
         case "dev"       => Tag.devLevel
         case "alpha"     => Tag.alphaLevel
         case "beta"      => Tag.betaLevel
+        case "pre"       => Tag.preLevel
         case "milestone" => Tag.milestoneLevel
         case "rc" | "cr" => Tag.rcLevel
         case "snapshot"  => Tag.snapshotLevel
@@ -183,10 +184,12 @@ object Version {
     // Qualifiers, in order. Those below emptyLevel denote pre-releases, those above it
     // denote releases. Unlike Maven, ga and final are distinct, and distinct from the empty
     // item, so that no two of them compare equal and sorting versions stays deterministic.
-    // dev isn't part of the documented ordering, it's kept as an extension, below alpha.
-    private[version] val devLevel       = -6
-    private[version] val alphaLevel     = -5
-    private[version] val betaLevel      = -4
+    // dev and pre aren't part of the documented ordering, they are kept as extensions,
+    // below alpha for dev, and between beta and milestone for pre.
+    private[version] val devLevel       = -7
+    private[version] val alphaLevel     = -6
+    private[version] val betaLevel      = -5
+    private[version] val preLevel       = -4
     private[version] val milestoneLevel = -3
     private[version] val rcLevel        = -2
     private[version] val snapshotLevel  = -1
