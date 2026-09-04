@@ -18,13 +18,13 @@ sealed abstract class VersionConstraint extends Product with Serializable with O
 
   private lazy val compareKey = preferred.headOption.orElse(interval.from).getOrElse(Version.zero)
   def compare(other: VersionConstraint): Int =
-    compareKey.compare(other.compareKey)
+    compareKey.compareSemantic(other.compareKey)
 
   def isValid: Boolean =
     interval.isValid && preferred.forall { v =>
       interval.contains(v) ||
         interval.to.forall { to =>
-          val cmp = v.compare(to)
+          val cmp = v.compareSemantic(to)
           cmp < 0 || (cmp == 0 && interval.toIncluded)
         }
     }
@@ -87,7 +87,7 @@ object VersionConstraint {
           interval.from match {
             case Some(from) =>
               allPreferred.filter { v =>
-                val cmp = from.compare(v)
+                val cmp = from.compareSemantic(v)
                 cmp < 0 || (cmp == 0 && interval.fromIncluded)
               }
             case None =>

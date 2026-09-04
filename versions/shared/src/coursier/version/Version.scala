@@ -18,9 +18,48 @@ case class Version(repr: String) extends Ordered[Version] {
       items0 = Version.items(repr)
     items0
   }
-  def compare(other: Version) = {
+  /**
+   * Total order on versions, consistent with `equals` and `hashCode`.
+   *
+   * `a.compare(b) == 0` if and only if `a == b`. Versions that are semantically
+   * equivalent but spelled differently (`1.0` and `1.0.0`, `1.2` and `1.2+foo`,
+   * `1.2+bar` and `1.2+foo`, …) are ordered by their representation, so that
+   * sorted collections and hash-based ones agree on which versions are distinct.
+   *
+   * Use [[compareSemantic]] to compare versions up to that equivalence.
+   */
+  def compare(other: Version): Int = {
     if (repr == other.repr) 0 // fast path
-    else Version.listCompare(items, other.items)
+    else {
+      val cmp = Version.listCompare(items, other.items)
+      // Break ties so that the order is total: versions that only differ by
+      // padding, separators, or build metadata are ordered by representation.
+      if (cmp == 0) repr.compareTo(other.repr)
+      else cmp
+    }
+  }
+
+  /**
+   * Compares versions up to the equivalence induced by version parsing.
+   *
+   * Returns `0` for versions that have the same meaning but different
+   * representations, like `1.0` and `1.0.0`, `1.1.0` and `1.1.0.Final`, or
+   * `1.2+foo` and `1.2+bar` (Semver § 10: build metadata doesn't take part in
+   * precedence).
+   *
+   * This is *not* consistent with `equals` - it is the order to use to decide
+   * whether a version sits in an interval, or whether two versions can be
+   * reconciled. Use [[compare]] for sorting or for sorted collections.
+   */
+  def compareSemantic(other: Version): Int =
+    if (repr == other.repr) 0 // fast path
+    else Version.listCompare(semanticItems, other.semanticItems)
+
+  private var semanticItems0: Vector[Version.Item] = null
+  private def semanticItems: Vector[Version.Item] = {
+    if (semanticItems0 == null)
+      semanticItems0 = Version.semanticItems(items)
+    semanticItems0
   }
   def isEmpty = items.forall(_.isEmpty)
 
@@ -121,6 +160,16 @@ object Version {
 
     override def compareToEmpty = level.compare(0)
     def isPreRelease: Boolean = level < Tag.emptyLevel
+
+    /**
+     * Whether this tag stands for the absence of a qualifier, like the `Final` of
+     * `3.10.1.Final` or the `GA` of `1.2.3.GA`.
+     *
+     * [[Version.compare]] orders those after the empty item, so that no two versions compare
+     * equal, while [[Version.compareSemantic]] treats them as the empty tag.
+     */
+    def isReleaseEquivalent: Boolean =
+      level == Tag.emptyLevel || level == Tag.gaLevel || level == Tag.finalLevel
     def compareTag(other: Tag): Int = {
       val levelComp = level.compare(other.level)
       if (levelComp == 0 && level == Tag.otherLevel) value.compareToIgnoreCase(other.value)
@@ -279,6 +328,26 @@ object Version {
   def items(repr: String): Vector[Item] = {
     val (first, tokens) = Tokenizer(repr)
     first +: tokens.toVector.map(_._2)
+  }
+
+  private val emptyTag = Tag("")
+
+  /**
+   * Replaces the tags that stand for the absence of a qualifier - `ga` and `final` - by the
+   * empty tag, so that `1.1.0`, `1.1.0.GA` and `1.1.0.Final` compare equal.
+   *
+   * Those tags are ordered right after the empty item, and nothing else sits between them, so
+   * that collapsing them keeps the order of everything else unchanged.
+   */
+  private def semanticItems(items: Vector[Item]): Vector[Item] = {
+    def isReleaseEquivalent(item: Item): Boolean =
+      item match {
+        case t: Tag => t.isReleaseEquivalent
+        case _ => false
+      }
+    if (items.exists(isReleaseEquivalent))
+      items.map(item => if (isReleaseEquivalent(item)) emptyTag else item)
+    else items
   }
 
   // before comparing two versions pad the number parts to the equal number of digits

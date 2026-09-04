@@ -25,6 +25,52 @@ sealed abstract class VersionCompatibility {
 
 object VersionCompatibility {
 
+  /**
+    * Whether `version` carries a pre-release qualifier.
+    *
+    * Two kinds of items count as pre-releases:
+    *   - pre-release qualifiers, wherever they appear (`1.2.3-RC1`, `2.13.0-M3`, `1.2.3.RC1`),
+    *   - plain literals right after a `-`, which is where semantic versioning puts
+    *     pre-releases (`1.0.0-preview`).
+    *
+    * Release qualifiers and plain literals in the fourth, dot-separated segment of a
+    * Maven-style version are deliberately *not* pre-releases: `3.10.1.Final` and
+    * `9.4.25.v20191220` are releases.
+    */
+  private def hasPreReleaseQualifier(version: Version): Boolean = {
+    val (first, rest) = Version.Tokenizer(version.repr)
+    def preRelease(item: Version.Item, afterHyphen: Boolean): Boolean =
+      item match {
+        case t: Version.Tag =>
+          if (t.isQualifier) t.isPreRelease else afterHyphen
+        case _ => false
+      }
+    preRelease(first, afterHyphen = false) ||
+    rest.exists {
+      case (sep, item) => preRelease(item, sep == Version.Tokenizer.Hyphen)
+    }
+  }
+
+  /**
+    * Whether `version` can take part in a semantic versioning compatibility check as a constraint.
+    *
+    * Its significant part (the major number, or major and minor for 0.x versions) must be numeric,
+    * the rest must be made of numbers, qualifiers and build metadata, and it must not be a
+    * pre-release - per semantic versioning, a constraint like `1.2.3-RC1` only accepts itself.
+    */
+  private def isSemVerComparable(version: Version, significantPartLength: Int): Boolean = {
+    val items = version.items
+    items.lengthCompare(significantPartLength) >= 0 &&
+    items.take(significantPartLength).forall(_.isNumber) &&
+    items.drop(significantPartLength).forall {
+      case _: Version.Numeric => true
+      case _: Version.BuildMetadata => true
+      case _: Version.Tag => true
+      case _ => false // Min / Max
+    } &&
+    !hasPreReleaseQualifier(version)
+  }
+
   case object Default extends VersionCompatibility {
     def isCompatible(constraint: String, version: String): Boolean =
       PackVer.isCompatible(constraint, version)
@@ -85,7 +131,7 @@ object VersionCompatibility {
         if (c.interval == VersionInterval.zero)
           c.preferred.exists { wanted =>
             val toCompare = significativePartLength(v)
-            wanted.items.forall(_.isNumber) &&
+            isSemVerComparable(wanted, toCompare) &&
             wanted.items.take(toCompare) == v.items.take(toCompare) && {
               import Ordering.Implicits._
               wanted.items.drop(toCompare) <= v.items.drop(toCompare)
@@ -101,7 +147,7 @@ object VersionCompatibility {
         .filter(_.forall(_.isNumber))
         .map(_.collect { case n: Version.Numeric => n })
         .map(items => items.map(_.repr).mkString("."))
-        .filter(s => Version(s).compareTo(v) <= 0)
+        .filter(s => Version(s).compareSemantic(v) <= 0)
       candidateOpt.getOrElse(version)
     }
   }
@@ -118,7 +164,7 @@ object VersionCompatibility {
         val v = Version(version)
         if (c.interval == VersionInterval.zero)
           c.preferred.exists { wanted =>
-            wanted.items.forall(_.isNumber) &&
+            isSemVerComparable(wanted, 1) &&
             wanted.items.take(1) == v.items.take(1) &&
             v.items.take(1).exists(!_.isEmpty) && {
               import Ordering.Implicits._
@@ -134,7 +180,7 @@ object VersionCompatibility {
         .filter(items => items.nonEmpty && items.forall(_.isNumber) && items.forall(!_.isEmpty))
         .map(_.collect { case n: Version.Numeric => n })
         .map(items => items.map(_.repr).mkString("."))
-        .filter(s => Version(s).compareTo(v) <= 0)
+        .filter(s => Version(s).compareSemantic(v) <= 0)
       candidateOpt.getOrElse(version)
     }
   }
@@ -155,7 +201,7 @@ object VersionCompatibility {
         .filter(_.forall(_.isNumber))
         .map(_.collect { case n: Version.Numeric => n })
         .map(items => items.map(_.repr).mkString("."))
-        .filter(s => Version(s).compareTo(v) <= 0)
+        .filter(s => Version(s).compareSemantic(v) <= 0)
       candidateOpt.getOrElse(version)
     }
   }
