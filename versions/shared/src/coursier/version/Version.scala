@@ -18,10 +18,41 @@ case class Version(repr: String) extends Ordered[Version] {
       items0 = Version.items(repr)
     items0
   }
-  def compare(other: Version) = {
+  /**
+   * Total order on versions, consistent with `equals` and `hashCode`.
+   *
+   * `a.compare(b) == 0` if and only if `a == b`. Versions that are semantically
+   * equivalent but spelled differently (`1.0` and `1.0.0`, `1.2` and `1.2+foo`,
+   * `1.2+bar` and `1.2+foo`, …) are ordered by their representation, so that
+   * sorted collections and hash-based ones agree on which versions are distinct.
+   *
+   * Use [[compareSemantic]] to compare versions up to that equivalence.
+   */
+  def compare(other: Version): Int = {
+    if (repr == other.repr) 0 // fast path
+    else {
+      val cmp = Version.listCompare(items, other.items)
+      // Break ties so that the order is total: versions that only differ by
+      // padding, separators, or build metadata are ordered by representation.
+      if (cmp == 0) repr.compareTo(other.repr)
+      else cmp
+    }
+  }
+
+  /**
+   * Compares versions up to the equivalence induced by version parsing.
+   *
+   * Returns `0` for versions that have the same meaning but different
+   * representations, like `1.0` and `1.0.0`, or `1.2+foo` and `1.2+bar`
+   * (Semver § 10: build metadata doesn't take part in precedence).
+   *
+   * This is *not* consistent with `equals` - it is the order to use to decide
+   * whether a version sits in an interval, or whether two versions can be
+   * reconciled. Use [[compare]] for sorting or for sorted collections.
+   */
+  def compareSemantic(other: Version): Int =
     if (repr == other.repr) 0 // fast path
     else Version.listCompare(items, other.items)
-  }
   def isEmpty = items.forall(_.isEmpty)
 
   def withRepr(repr: String): Version =

@@ -6,6 +6,9 @@ import utest._
 object VersionTests extends TestSuite {
 
   def compare(first: String, second: String) =
+    Version(first).compareSemantic(Version(second))
+
+  def compareTotal(first: String, second: String) =
     Version(first).compare(Version(second))
 
   def increasing(versions: String*): Boolean =
@@ -50,6 +53,20 @@ object VersionTests extends TestSuite {
         // Semver § 10: two versions that differ only in the build metadata, have the same precedence
         assert(compare("1.2+bar", "1.2+foo") == 0)
         assert(compare("1.2+bar.1", "1.2+bar.2") == 0)
+      }
+
+      test("total") {
+        // build metadata doesn't take part in precedence, but it still tells versions
+        // apart, so that the order stays total (see #13)
+        assert(compareTotal("1.2", "1.2+foo") < 0)
+        assert(compareTotal("2.0", "2.0+20130313144700") < 0)
+        assert(compareTotal("2.0+20130313144700", "2.0.2") < 0)
+
+        assert(compareTotal("1.2+bar", "1.2+foo") < 0)
+        assert(compareTotal("1.2+bar.1", "1.2+bar.2") < 0)
+
+        // scalajs-scalalib is published as <scalaVersion>+<scalaJsVersion>
+        assert(compareTotal("2.13.16+1.18.2", "2.13.16+1.19.0") < 0)
       }
 
       test("shouldNotParseMetadata") {
@@ -427,6 +444,82 @@ object VersionTests extends TestSuite {
       val items = Version("1.x.0-alpha").items
       val expectedItems = Seq(Version.Number(1), Version.Max, Version.Number(0), Version.Tag("alpha"))
       assert(items == expectedItems)
+    }
+
+    test("totalOrder") {
+      // https://github.com/coursier/versions/issues/13
+      // Versions that compareSemantic considers equal, but that aren't equal.
+      // ga, final and the empty item are distinct qualifiers, and single letter
+      // qualifiers are only expanded when followed by a digit, so 1-ga, 1-final
+      // and 1.0-a aren't part of any of these groups.
+      val equivalent = Seq(
+        Seq("1", "1.0", "1.0.0", "1.0.0.0", "1.0000000000000", "01", "1-"),
+        Seq("1.2", "1.2+foo", "1.2+bar", "1.02"),
+        Seq("1.0-alpha", "1.0.0-alpha", "1.0alpha", "1.0.ALPHA"),
+        Seq("1.0-rc", "1.0-cr", "1.0.0-rc", "1.0rc", "1.0.RC"),
+        Seq("1.0-m1", "1.0-milestone-1", "1.0m1", "1.0.0-milestone-1")
+      )
+
+      test("consistentWithEquals") {
+        for {
+          group <- equivalent
+          first <- group
+          second <- group
+        } {
+          val a = Version(first)
+          val b = Version(second)
+          // compare is only 0 for versions that are equal, unlike compareSemantic
+          assert((a.compare(b) == 0) == (a == b))
+          assert(a.compareSemantic(b) == 0)
+        }
+      }
+
+      test("antisymmetric") {
+        for {
+          group <- equivalent
+          first <- group
+          second <- group
+        } {
+          val a = Version(first)
+          val b = Version(second)
+          assert(math.signum(a.compare(b)) == -math.signum(b.compare(a)))
+        }
+      }
+
+      test("sortedAndHashedAgree") {
+        for (group <- equivalent) {
+          val versions = group.map(Version(_))
+          val hashed = versions.toSet
+          val sorted = scala.collection.immutable.TreeSet.empty[Version] ++ versions
+          assert(hashed.size == group.distinct.length)
+          assert(sorted.size == hashed.size)
+          assert(sorted == hashed)
+        }
+      }
+
+      test("hashCodeConsistent") {
+        for {
+          group <- equivalent
+          first <- group
+          second <- group
+          if Version(first) == Version(second)
+        } assert(Version(first).hashCode == Version(second).hashCode)
+      }
+
+      test("pvp") {
+        // PVP orders versions by the lexicographic ordering of their components,
+        // so extra trailing components make a version greater
+        assert(compareTotal("1.0.0", "1.0.0.0") < 0)
+        assert(compareTotal("1", "1.0") < 0)
+        assert(compareTotal("2.0.1", "1.3.2") > 0)
+      }
+
+      test("semanticOrderStillWins") {
+        // the tie-break only kicks in for versions that compareSemantic considers equal
+        assert(compareTotal("1.9", "1.10") < 0)
+        assert(compareTotal("1.0-SNAPSHOT", "1.0") < 0)
+        assert(compareTotal("1.0.0.0.0.1", "1.0.1") < 0)
+      }
     }
 
     test("isStable") {

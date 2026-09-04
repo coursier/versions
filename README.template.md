@@ -54,7 +54,21 @@ The coursier documentation [details](https://get-coursier.io/docs/other-version-
 how versions are compared.
 
 `Version` implements `Ordered[Version]`, so that `Version` instances can be compared together,
-and a sequence of `Version`s can be sorted.
+and a sequence of `Version`s can be sorted. That order is total, and consistent with `equals`:
+`a.compare(b)` is `0` if and only if `a == b`. Versions that mean the same thing but are spelled
+differently, like `1.0` and `1.0.0`, or `1.2+foo` and `1.2+bar`, are ordered by their
+representation, so that sorted collections and hash-based ones agree on which versions are
+distinct.
+
+Use `compareSemantic` to compare versions up to that equivalence - it returns `0` for versions
+that only differ by padding, separators, or build metadata. This is the order that decides
+whether a version sits in an interval, or whether two constraints can be reconciled:
+```scala
+Version("1.0").compare(Version("1.0.0"))
+// res: Int = -2
+Version("1.0").compareSemantic(Version("1.0.0"))
+// res: Int = 0
+```
 
 ## `VersionConstraint`
 

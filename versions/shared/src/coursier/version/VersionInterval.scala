@@ -12,7 +12,7 @@ case class VersionInterval(
       for {
         f <- from
         t <- to
-        cmd = f.compare(t)
+        cmd = f.compareSemantic(t)
       } yield cmd < 0 || (cmd == 0 && fromIncluded && toIncluded)
 
     fromToOrder.forall(x => x) && (from.nonEmpty || !fromIncluded) && (to.nonEmpty || !toIncluded)
@@ -21,12 +21,12 @@ case class VersionInterval(
   def contains(version: Version): Boolean = {
     val fromCond =
       from.forall { from0 =>
-        val cmp = from0.compare(version)
+        val cmp = from0.compareSemantic(version)
         cmp < 0 || cmp == 0 && fromIncluded
       }
     lazy val toCond =
       to.forall { to0 =>
-        val cmp = version.compare(to0)
+        val cmp = version.compareSemantic(to0)
         cmp < 0 || cmp == 0 && toIncluded
       }
 
@@ -49,7 +49,7 @@ case class VersionInterval(
     val (newFrom, newFromIncluded) =
       (from, other.from) match {
         case (Some(a), Some(b)) =>
-          val cmp = a.compare(b)
+          val cmp = a.compareSemantic(b)
           if (cmp < 0) (Some(b), other.fromIncluded)
           else if (cmp > 0) (Some(a), fromIncluded)
           else (Some(a), fromIncluded && other.fromIncluded)
@@ -62,7 +62,7 @@ case class VersionInterval(
     val (newTo, newToIncluded) =
       (to, other.to) match {
         case (Some(a), Some(b)) =>
-          val cmp = a.compare(b)
+          val cmp = a.compareSemantic(b)
           if (cmp < 0) (Some(a), toIncluded)
           else if (cmp > 0) (Some(b), other.toIncluded)
           else (Some(a), toIncluded && other.toIncluded)
