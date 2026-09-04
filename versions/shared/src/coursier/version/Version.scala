@@ -92,32 +92,75 @@ object Version {
   }
 
   /**
-   * Tags represent prerelease tags, typically appearing after - for SemVer compatible versions.
+   * Tags represent the literal items of a version, like the prerelease tags typically
+   * appearing after - for SemVer compatible versions.
+   *
+   * A tag is either a qualifier, when its value has a special meaning (see [[Tag.level]]),
+   * or a plain literal. Qualifiers are ordered by level, some of them before the empty item
+   * and some after it, and plain literals go after all of them, ordered lexicographically.
    */
   case class Tag(value: String) extends Item {
     val order = -1
-    private val otherLevel = -5
     lazy val level: Int =
       value match {
-        case "ga" | "final" | "" => 0 // 1.0.0 equivalent
-        case "snapshot"          => -1
-        case "rc" | "cr"         => -2
-        case "beta" | "b"        => -3
-        case "alpha" | "a"       => -4
-        case "dev"               => -6
-        case "sp" | "bin"        => 1
-        case _                   => otherLevel
+        case "dev"       => Tag.devLevel
+        case "alpha"     => Tag.alphaLevel
+        case "beta"      => Tag.betaLevel
+        case "milestone" => Tag.milestoneLevel
+        case "rc" | "cr" => Tag.rcLevel
+        case "snapshot"  => Tag.snapshotLevel
+        case ""          => Tag.emptyLevel
+        case "ga"        => Tag.gaLevel
+        case "final"     => Tag.finalLevel
+        case "sp"        => Tag.spLevel
+        case _           => Tag.otherLevel
       }
 
+    /** Whether this tag is a qualifier, rather than a plain literal item. */
+    def isQualifier: Boolean = level != Tag.otherLevel
+
     override def compareToEmpty = level.compare(0)
-    def isPreRelease: Boolean = level < 0
+    def isPreRelease: Boolean = level < Tag.emptyLevel
     def compareTag(other: Tag): Int = {
       val levelComp = level.compare(other.level)
-      if (levelComp == 0 && level == otherLevel) value.compareToIgnoreCase(other.value)
+      if (levelComp == 0 && level == Tag.otherLevel) value.compareToIgnoreCase(other.value)
       else levelComp
     }
     def withValue(value: String): Tag =
       copy(value = value)
+  }
+
+  object Tag {
+    // Qualifiers, in order. Those below emptyLevel denote pre-releases, those above it
+    // denote releases. Unlike Maven, ga and final are distinct, and distinct from the empty
+    // item, so that no two of them compare equal and sorting versions stays deterministic.
+    // dev isn't part of the documented ordering, it's kept as an extension, below alpha.
+    private[version] val devLevel       = -6
+    private[version] val alphaLevel     = -5
+    private[version] val betaLevel      = -4
+    private[version] val milestoneLevel = -3
+    private[version] val rcLevel        = -2
+    private[version] val snapshotLevel  = -1
+    // An empty tag is the only one equivalent to the empty item.
+    private[version] val emptyLevel     = 0
+    private[version] val gaLevel        = 1
+    private[version] val finalLevel     = 2
+    private[version] val spLevel        = 3
+    // Plain literal items sort after all the qualifiers, and before non-zero numeric items.
+    private[version] val otherLevel     = 4
+
+    // alpha, beta and milestone can be abbreviated to their initial, but only when that
+    // initial is directly followed by a digit: 1.1a1 is equivalent to 1.1-alpha-1, while
+    // 1.1a and 1.1a-1 have a plain literal a in them.
+    private[version] def expandAbbreviation(value: String, followedByDigit: Boolean): String =
+      if (followedByDigit)
+        value match {
+          case "a" => "alpha"
+          case "b" => "beta"
+          case "m" => "milestone"
+          case _   => value
+        }
+      else value
   }
   case class BuildMetadata(value: String) extends Item {
     val order = 1
@@ -170,7 +213,7 @@ object Version {
             case "x" if prev == Some(Dot) => Max
             case "min" => Min
             case "max" => Max
-            case _     => Tag(letters0)
+            case _     => Tag(Tag.expandAbbreviation(letters0, rem.headOption.exists(_.isDigit)))
           }
           (item, rem)
         } else {

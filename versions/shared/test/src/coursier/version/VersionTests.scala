@@ -193,20 +193,24 @@ object VersionTests extends TestSuite {
       assert(compare("1-alpha1", "1-a1" ) == 0)
       assert(compare("1-alpha", "1-beta" ) < 0)
       assert(compare("1-beta1", "1-b1" ) == 0)
-      assert(compare("1-beta", "1-milestone" ) > 0)
-      assert(compare("1-milestone1", "1-m1" ) > 0)
+      assert(compare("1-beta", "1-milestone" ) < 0)
+      assert(compare("1-milestone1", "1-m1" ) == 0)
       assert(compare("1-milestone", "1-rc" ) < 0)
       assert(compare("1-rc", "1-cr" ) == 0)
       assert(compare("1-rc", "1-snapshot" ) < 0)
       assert(compare("1-snapshot", "1" ) < 0)
-      assert(compare("1", "1-ga" ) == 0)
-      assert(compare("1", "1.ga.0.ga" ) == 0)
-      assert(compare("1.0", "1-ga" ) == 0)
-      assert(compare("1", "1-ga.ga" ) == 0)
-      assert(compare("1", "1-ga-ga" ) == 0)
-      assert(compare("A", "A.ga.ga" ) == 0)
-      assert(compare("A", "A-ga-ga" ) == 0)
-      assert(compare("1", "1-final" ) == 0)
+      // ga, final and sp all denote releases, and go after the empty item, in that order.
+      // None of them is equivalent to another, nor to the empty item.
+      assert(compare("1", "1-ga" ) < 0)
+      assert(compare("1", "1.ga.0.ga" ) < 0)
+      assert(compare("1.0", "1-ga" ) < 0)
+      assert(compare("1", "1-ga.ga" ) < 0)
+      assert(compare("1", "1-ga-ga" ) < 0)
+      assert(compare("A", "A.ga.ga" ) < 0)
+      assert(compare("A", "A-ga-ga" ) < 0)
+      assert(compare("1-ga", "1-final" ) < 0)
+      assert(compare("1-final", "1-sp" ) < 0)
+      assert(compare("1", "1-final" ) < 0)
       assert(compare("1", "1-sp" ) < 0)
 
       assert(compare("2.12.4-bin-typelevel-4", "2.12.4" ) > 0)
@@ -220,50 +224,54 @@ object VersionTests extends TestSuite {
 
     test("wellKnownQualifierVersusUnknownQualifierOrdering") {
       assert(compare("1-milestone", "1-rc" ) < 0)
-      assert(compare("1-milestone", "1-beta" ) < 0)
+      assert(compare("1-milestone", "1-beta" ) > 0)
       assert(compare("1-M1", "1-rc1" ) < 0)
 
-      assert(compare("1-abc", "1-alpha" ) < 0)
-      assert(compare("1-abc", "1-beta" ) < 0)
-      assert(compare("1-abc", "1-milestone" ) < 0)
-      assert(compare("1-abc", "1-rc" ) < 0)
-      assert(compare("1-abc", "1-snapshot" ) < 0)
-      assert(compare("1-abc", "1" ) < 0)
-      assert(compare("1-abc", "1-sp" ) < 0)
+      // unknown qualifiers are plain literal items, they go after all the known
+      // qualifiers and after the empty item, but before non-zero numeric items
+      assert(compare("1-abc", "1-alpha" ) > 0)
+      assert(compare("1-abc", "1-beta" ) > 0)
+      assert(compare("1-abc", "1-milestone" ) > 0)
+      assert(compare("1-abc", "1-rc" ) > 0)
+      assert(compare("1-abc", "1-snapshot" ) > 0)
+      assert(compare("1-abc", "1" ) > 0)
+      assert(compare("1-abc", "1-sp" ) > 0)
 
-      assert(compare("1.0m", "1.0" ) < 0)
-      assert(compare("1.0-m", "1.0" ) < 0)
-      assert(compare("1.0.m", "1.0" ) < 0)
+      assert(compare("1.0m", "1.0" ) > 0)
+      assert(compare("1.0-m", "1.0" ) > 0)
+      assert(compare("1.0.m", "1.0" ) > 0)
 
       assert(compare("1.0m1", "1.0" ) < 0)
       assert(compare("1.0-m1", "1.0" ) < 0)
       assert(compare("1.0.m1", "1.0" ) < 0)
-      assert(compare("1.0m.1", "1.0" ) < 0)
-      assert(compare("1.0m-1", "1.0" ) < 0)
+      assert(compare("1.0m.1", "1.0" ) > 0)
+      assert(compare("1.0m-1", "1.0" ) > 0)
 
       assert(compare("1.0.1-MF", "1.0.0" ) > 0)
-      assert(compare("1.0.1-MF", "1.0.1" ) < 0)
+      assert(compare("1.0.1-MF", "1.0.1" ) > 0)
       assert(compare("1.0.1-MF", "1.0.2" ) < 0)
       assert(compare("1.0.1-X20", "1.0.0" ) > 0)
-      assert(compare("1.0.1-X20", "1.0.1" ) < 0)
+      assert(compare("1.0.1-X20", "1.0.1" ) > 0)
       assert(compare("1.0.1-X20", "1.0.2" ) < 0)
       assert(compare("1.0.1-SNAP12", "1.0.0" ) > 0)
-      assert(compare("1.0.1-SNAP12", "1.0.1" ) < 0)
+      assert(compare("1.0.1-SNAP12", "1.0.1" ) > 0)
       assert(compare("1.0.1-SNAP12", "1.0.2" ) < 0)
     }
 
 
     test("wellKnownSingleCharQualifiersOnlyRecognizedIfImmediatelyFollowedByNumber") {
-      assert(compare("1.0a", "1.0" ) < 0)
-      assert(compare("1.0-a", "1.0" ) < 0)
-      assert(compare("1.0.a", "1.0" ) < 0)
-      assert(compare("1.0b", "1.0" ) < 0)
-      assert(compare("1.0-b", "1.0" ) < 0)
-      assert(compare("1.0.b", "1.0" ) < 0)
-      assert(compare("1.0m", "1.0" ) < 0)
-      assert(compare("1.0-m", "1.0" ) < 0)
-      assert(compare("1.0.m", "1.0" ) < 0)
+      // not followed by a digit, so plain literal items, which go after the empty item
+      assert(compare("1.0a", "1.0" ) > 0)
+      assert(compare("1.0-a", "1.0" ) > 0)
+      assert(compare("1.0.a", "1.0" ) > 0)
+      assert(compare("1.0b", "1.0" ) > 0)
+      assert(compare("1.0-b", "1.0" ) > 0)
+      assert(compare("1.0.b", "1.0" ) > 0)
+      assert(compare("1.0m", "1.0" ) > 0)
+      assert(compare("1.0-m", "1.0" ) > 0)
+      assert(compare("1.0.m", "1.0" ) > 0)
 
+      // directly followed by a digit, so alpha / beta / milestone qualifiers
       assert(compare("1.0a1", "1.0" ) < 0)
       assert(compare("1.0-a1", "1.0" ) < 0)
       assert(compare("1.0.a1", "1.0" ) < 0)
@@ -274,12 +282,13 @@ object VersionTests extends TestSuite {
       assert(compare("1.0-m1", "1.0" ) < 0)
       assert(compare("1.0.m1", "1.0" ) < 0)
 
-      assert(compare("1.0a.1", "1.0" ) < 0)
-      assert(compare("1.0a-1", "1.0" ) < 0)
-      assert(compare("1.0b.1", "1.0" ) < 0)
-      assert(compare("1.0b-1", "1.0" ) < 0)
-      assert(compare("1.0m.1", "1.0" ) < 0)
-      assert(compare("1.0m-1", "1.0" ) < 0)
+      // followed by a separator rather than a digit, so plain literal items again
+      assert(compare("1.0a.1", "1.0" ) > 0)
+      assert(compare("1.0a-1", "1.0" ) > 0)
+      assert(compare("1.0b.1", "1.0" ) > 0)
+      assert(compare("1.0b-1", "1.0" ) > 0)
+      assert(compare("1.0m.1", "1.0" ) > 0)
+      assert(compare("1.0m-1", "1.0" ) > 0)
     }
 
 
@@ -324,9 +333,11 @@ object VersionTests extends TestSuite {
     test("qualifierVersusNumberOrdering") {
       assert(compare("1-ga", "1-1" ) < 0)
       assert(compare("1.ga", "1.1" ) < 0)
-      assert(compare("1-ga", "1.0" ) == 0)
-      assert(compare("1.ga", "1.0" ) == 0)
+      assert(compare("1-ga", "1.0" ) > 0)
+      assert(compare("1.ga", "1.0" ) > 0)
 
+      // 1-0-1 has a longer numeric prefix, so 1-ga-1 is padded to 1-0-0-ga-1, and the
+      // comparison is settled at the third item, before reaching the ga tag
       assert(compare("1-ga-1", "1-0-1" ) < 0)
       assert(compare("1.ga.1", "1.0.1" ) < 0)
 
@@ -386,8 +397,10 @@ object VersionTests extends TestSuite {
       assert(increasing( "1.0-alpha", "1.0", "1.0.1" ))
       assert(increasing( "1.0.alpha", "1.0", "1.0.1" ))
 
-      assert(increasing( "1.0-M1", "1.0-MF", "1.0-X1", "1.0-alpha1", "1.0-RC1", "1.0", "2.0", "2.0.2"))
-      assert(increasing( "1.0-MF", "1.0-X1", "1.0a", "1.0-RC1", "1.0", "2.0", "2.0.2"))
+      // M1 is a milestone, while MF, X1 and a are plain literal items, which sort
+      // after 1.0 rather than before it
+      assert(increasing( "1.0-alpha1", "1.0-M1", "1.0-RC1", "1.0", "1.0-MF", "1.0-X1", "2.0", "2.0.2"))
+      assert(increasing( "1.0-RC1", "1.0", "1.0a", "1.0-MF", "1.0-X1", "2.0", "2.0.2"))
     }
 
 
@@ -423,6 +436,70 @@ object VersionTests extends TestSuite {
       assert(!Version("1.2.3-g12eafd3").isStable)
       assert(!Version("1.2.3-M2").isStable)
       assert(!Version("1.2.3-RC1").isStable)
+    }
+
+    // All the examples from
+    // https://get-coursier.io/docs/other-version-handling.html#ordering
+    test("orderingDocExamples") {
+      // "1.0.1 has the same ordering as 1.0-1 (actual separators don't matter)"
+      assert(compare("1.0.1", "1.0-1") == 0)
+
+      // "1.0.1 or 1.0.1.0 goes before 1.0.1e (literal e goes after empty / zero items)"
+      assert(compare("1.0.1", "1.0.1e") < 0)
+      assert(compare("1.0.1.0", "1.0.1e") < 0)
+
+      // "1.0.1e goes before 1.0.1.2 (literal e goes before non-zero numeric item 2)"
+      assert(compare("1.0.1e", "1.0.1.2") < 0)
+
+      // "1.1.0 has same ordering as 1.1 (zero or empty items are equivalent)"
+      assert(compare("1.1.0", "1.1") == 0)
+
+      // "1.1-alpha goes before 1.1-rc (qualifier alpha before rc)"
+      assert(compare("1.1-alpha", "1.1-rc") < 0)
+
+      // "1.1-rc goes before 1.1-final (qualifier rc before final)"
+      assert(compare("1.1-rc", "1.1-final") < 0)
+
+      // "1.1 goes before 1.1-final (empty item before qualifier final)"
+      assert(compare("1.1", "1.1-final") < 0)
+
+      // "1.1 goes before 1.1a (empty item before literal a)"
+      assert(compare("1.1", "1.1a") < 0)
+
+      // "1.1a goes before 1.1-foo (literal item a before literal foo)"
+      assert(compare("1.1a", "1.1-foo") < 0)
+
+      // "1.1a is not equivalent to 1.1-alpha, as a is not followed by a digit. On the
+      // other hand, 1.1a1 is equivalent to 1.1-alpha-1, and 1.1a-1 is not, as a is
+      // followed by -, not by a digit."
+      assert(compare("1.1a", "1.1-alpha") != 0)
+      assert(compare("1.1a1", "1.1-alpha-1") == 0)
+      assert(compare("1.1a-1", "1.1-alpha-1") != 0)
+
+      // "A last rule consists in ignoring any 0 items before a literal. For example:
+      // both 1.0-alpha-1 and 1.0.0-alpha-1 go before 1-beta, 1.0-beta, and 1.0.0-beta"
+      assert(compare("1.0-alpha-1", "1-beta") < 0)
+      assert(compare("1.0-alpha-1", "1.0-beta") < 0)
+      assert(compare("1.0-alpha-1", "1.0.0-beta") < 0)
+      assert(compare("1.0.0-alpha-1", "1-beta") < 0)
+      assert(compare("1.0.0-alpha-1", "1.0-beta") < 0)
+      assert(compare("1.0.0-alpha-1", "1.0.0-beta") < 0)
+    }
+
+    // "Some literal items have a special meaning. These are, in comparison order: alpha
+    // (or a if directly followed by a digit), beta (or b if directly followed by a digit),
+    // milestone (or m if directly followed by a digit), cr or rc, snapshot, then the empty
+    // item itself, ga, final, sp. They all go before the plain literal items."
+    test("orderingDocQualifierList") {
+      assert(increasing(
+        "1-alpha", "1-beta", "1-milestone", "1-rc", "1-snapshot", "1", "1-ga", "1-final",
+        "1-sp", "1-zzz", "1-1"
+      ))
+      // cr and rc are two spellings of the same qualifier, so are m1 and milestone1
+      assert(compare("1-cr", "1-rc") == 0)
+      assert(compare("1-m1", "1-milestone1") == 0)
+      // dev is a coursier extension, it isn't part of the documented list
+      assert(compare("1-dev", "1-alpha") < 0)
     }
   }
 
