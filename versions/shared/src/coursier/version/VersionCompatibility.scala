@@ -101,7 +101,7 @@ object VersionCompatibility {
         .filter(_.forall(_.isNumber))
         .map(_.collect { case n: Version.Numeric => n })
         .map(items => items.map(_.repr).mkString("."))
-        .filter(s => Version(s).compareTo(v) <= 0)
+        .filter(s => Version(s).compareSemantic(v) <= 0)
       candidateOpt.getOrElse(version)
     }
   }
@@ -134,7 +134,7 @@ object VersionCompatibility {
         .filter(items => items.nonEmpty && items.forall(_.isNumber) && items.forall(!_.isEmpty))
         .map(_.collect { case n: Version.Numeric => n })
         .map(items => items.map(_.repr).mkString("."))
-        .filter(s => Version(s).compareTo(v) <= 0)
+        .filter(s => Version(s).compareSemantic(v) <= 0)
       candidateOpt.getOrElse(version)
     }
   }
@@ -155,7 +155,7 @@ object VersionCompatibility {
         .filter(_.forall(_.isNumber))
         .map(_.collect { case n: Version.Numeric => n })
         .map(items => items.map(_.repr).mkString("."))
-        .filter(s => Version(s).compareTo(v) <= 0)
+        .filter(s => Version(s).compareSemantic(v) <= 0)
       candidateOpt.getOrElse(version)
     }
   }
