@@ -100,11 +100,13 @@ trait VersionsPublishModule extends PublishModule with VersionsMima {
 trait Versions extends Cross.Module[String] with ScalaModule with VersionsPublishModule {
   def artifactName = "versions"
   def scalaVersion = crossValue
+  // first version with Scala 3 artifacts
+  private def scala3CutOff = "0.6.0"
   def mimaPreviousVersions = Task {
     import _root_.coursier.version.Version
     val previousVersions = super.mimaPreviousVersions()
     if (scalaVersion().startsWith("3.")) {
-      val cutOff = Version("0.6.0")
+      val cutOff = Version(scala3CutOff)
       previousVersions
         .map(Version(_))
         .filter(_ >= cutOff)
@@ -113,12 +115,23 @@ trait Versions extends Cross.Module[String] with ScalaModule with VersionsPublis
       previousVersions
   }
   def mimaPreviousArtifacts = Task {
+    import _root_.coursier.version.Version
     val artifacts = super.mimaPreviousArtifacts()
     if (scalaVersion().startsWith("3.")) {
+      // Before the first Scala 3 artifacts, Scala 3 users relied on the Scala 2.13 ones,
+      // so check binary compatibility against those too. From that version on, the Scala 3
+      // artifacts above are the ones to check against - the Scala 2.13 ones differ from
+      // them in ways that are expected (case class unapply signature, default arguments
+      // getters, …).
+      val cutOff = Version(scala3CutOff)
       val artifactId213 = artifactId().stripSuffix("_3") + "_2.13"
-      val artifacts213 = super.mimaPreviousVersions().distinct.map(version =>
-        mvn"${pomSettings().organization}:$artifactId213:$version"
-      )
+      val artifacts213 = super.mimaPreviousVersions()
+        .distinct
+        .map(Version(_))
+        .filter(_ < cutOff)
+        .map(version =>
+          mvn"${pomSettings().organization}:$artifactId213:${version.repr}"
+        )
       artifacts ++ artifacts213
     } else
       artifacts
