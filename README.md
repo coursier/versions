@@ -17,7 +17,7 @@ libraryDependencies += "io.get-coursier" %% "versions" % "0.3.3"
 ```
 
 The latest version is
-[![Maven Central](https://img.shields.io/maven-central/v/io.get-coursier/versions_2.13.svg)](https://maven-badges.herokuapp.com/maven-central/io.get-coursier/versions_2.13).
+[![Maven Central](https://img.shields.io/maven-central/v/io.get-coursier/versions_2.13.svg)](https://repo1.maven.org/maven2/io/get-coursier/versions_3).
 
 All *coursier-versions* classes live under the `coursier.version` namespace. The snippets below
 assume
