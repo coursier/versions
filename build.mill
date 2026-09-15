@@ -15,12 +15,16 @@ import java.io.File
 
 object DepVersions {
   def mdoc = "2.3.6"
+  def scala212 = "2.12.21"
   def scala213 = "2.13.18"
   def scala3 = "3.3.8"
   def scalaJs = "1.22.0"
   def scalaNative = "0.5.12"
 
-  def scala = Seq(scala213, "2.12.21", scala3)
+  // Scala versions we build for on the JVM
+  def scala = Seq(scala213, scala212, scala3)
+  // Scala.js and Scala Native modules are only published for Scala 2.13 and Scala 3
+  def scalaPlatforms = Seq(scala213, scala3)
 }
 
 object Deps {
@@ -281,8 +285,8 @@ object versions extends Module {
     def testSources = Task.Source("test/src")
   }
   object jvm extends Cross[VersionsJvm](DepVersions.scala)
-  object js extends Cross[VersionsJs](DepVersions.scala)
-  object native extends Cross[VersionsNative](DepVersions.scala)
+  object js extends Cross[VersionsJs](DepVersions.scalaPlatforms)
+  object native extends Cross[VersionsNative](DepVersions.scalaPlatforms)
 }
 
 
