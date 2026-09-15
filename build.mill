@@ -155,12 +155,7 @@ trait Versions extends Cross.Module[String] with ScalaModule with VersionsPublis
     )
   }
   def sources = Task {
-    val sv = scalaVersion()
-    val extraSources =
-      if (sv.startsWith("2.")) Seq(versions.shared.scala2Sources())
-      else if (sv.startsWith("3.")) Seq(versions.shared.scala3Sources())
-      else Nil
-    super.sources() ++ Seq(versions.shared.sources()) ++ extraSources
+    super.sources() ++ Seq(versions.shared.sources())
   }
 
   def mimaBinaryIssueFilters = super.mimaBinaryIssueFilters() ++ Seq(
@@ -204,9 +199,6 @@ trait Versions extends Cross.Module[String] with ScalaModule with VersionsPublis
     val scala3SyntheticFilters =
       if (scalaVersion().startsWith("3."))
         Seq(
-          ProblemFilter.exclude[DirectMissingMethodProblem](
-            "coursier.version.ModuleMatchers.apply"
-          ),
           ProblemFilter.exclude[DirectMissingMethodProblem](
             "coursier.version.ModuleMatcher.coursier$version$ModuleMatcher$$blobToPattern$default$2"
           )
@@ -280,8 +272,6 @@ trait VersionsNative extends Versions with ScalaNativeModule {
 object versions extends Module {
   object shared extends Module {
     def sources = Task.Source("src")
-    def scala2Sources = Task.Source("src-2")
-    def scala3Sources = Task.Source("src-3")
     def testSources = Task.Source("test/src")
   }
   object jvm extends Cross[VersionsJvm](DepVersions.scala)
