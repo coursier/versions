@@ -550,3 +550,28 @@ val noPrevious = Previous.previousStableVersion("1.2.0")
 // noPrevious: Option[String] = None
 ```
 
+
+## Contributing
+
+*coursier-versions* is built with [Mill](https://mill-build.org), via the `./mill` launcher at the
+root of this repository.
+
+Run the tests for all platforms and Scala versions, or only for the JVM, with
+```text
+$ ./mill __.test
+$ ./mill versions.jvm.__.test
+```
+
+Check binary compatibility with
+```text
+$ ./mill __.mimaReportBinaryIssues
+```
+
+`README.md` is generated from `README.template.md` with [mdoc](https://scalameta.org/mdoc), so that
+its Scala snippets are compiled and run, and their outputs are up-to-date. Edit the template rather
+than `README.md`, then re-generate the latter with the command below, which requires
+[`cs`](https://get-coursier.io/docs/cli-installation) to be installed:
+```text
+$ ./mill mdoc
+```
+The version in the [Usage](#usage) section has to be updated by hand after a release.
