@@ -441,9 +441,11 @@ The following algorithms are available:
 - `EarlySemVer`: early semantic versioning that keeps 0.6.z bincompat
 - `SemVerSpec`: semantic versioning spec that treats all 0.y.z as initial development
 - `PackVer`: package versioning policy
-- `Strict`: exact match required
+- `Strict`: the version has to be exactly the one of the constraint, or to be in its interval
 - `Always`: assume any input constraint and version match
 - `Default`: currently equal to `PackVer`
+
+`SemVer` is a deprecated alias of `EarlySemVer`.
 
 ```scala
 val semVerCheck1 = VersionCompatibility.EarlySemVer.isCompatible("1.2.0", "1.2.4")
@@ -455,6 +457,8 @@ val semVerCheck3 = VersionCompatibility.EarlySemVer.isCompatible("2.1.3", "1.2.4
 ```
 
 
+`Strict` doesn't allow for any difference between two versions, but a version only has to be in
+the interval of an interval constraint, like `1.2+` here:
 ```scala
 val strictCheck1 = VersionCompatibility.Strict.isCompatible("1.2.0", "1.2.4")
 // strictCheck1: Boolean = false
@@ -462,5 +466,31 @@ val strictCheck2 = VersionCompatibility.Strict.isCompatible("1.2+", "1.2.4")
 // strictCheck2: Boolean = true
 val strictCheck3 = VersionCompatibility.Strict.isCompatible("2.1.3", "1.2.4")
 // strictCheck3: Boolean = false
+```
+
+
+`minimumCompatibleVersion` gives the lowest version that a version is compatible with:
+```scala
+val earlySemVerMin = VersionCompatibility.EarlySemVer.minimumCompatibleVersion("1.2.4")
+// earlySemVerMin: String = "1"
+val earlySemVerMin0 = VersionCompatibility.EarlySemVer.minimumCompatibleVersion("0.6.3")
+// earlySemVerMin0: String = "0.6"
+val semVerSpecMin0 = VersionCompatibility.SemVerSpec.minimumCompatibleVersion("0.6.3")
+// semVerSpecMin0: String = "0.6.3"
+val packVerMin = VersionCompatibility.PackVer.minimumCompatibleVersion("1.2.4")
+// packVerMin: String = "1.2"
+```
+
+
+`VersionCompatibility` instances can be parsed from strings, among `default`, `always`, `strict`,
+`early-semver`, `semver-spec`, and `pvp`. Beware that `semver` throws an exception rather than
+returning `None`, as it's ambiguous between `early-semver` and `semver-spec`.
+```scala
+val parsedCompatibility = VersionCompatibility("early-semver")
+// parsedCompatibility: Option[VersionCompatibility] = Some(
+//   value = EarlySemVer
+// )
+val unknownCompatibility = VersionCompatibility("foo")
+// unknownCompatibility: Option[VersionCompatibility] = None
 ```
 

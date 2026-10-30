@@ -304,9 +304,11 @@ The following algorithms are available:
 - `EarlySemVer`: early semantic versioning that keeps 0.6.z bincompat
 - `SemVerSpec`: semantic versioning spec that treats all 0.y.z as initial development
 - `PackVer`: package versioning policy
-- `Strict`: exact match required
+- `Strict`: the version has to be exactly the one of the constraint, or to be in its interval
 - `Always`: assume any input constraint and version match
 - `Default`: currently equal to `PackVer`
+
+`SemVer` is a deprecated alias of `EarlySemVer`.
 
 ```scala mdoc
 val semVerCheck1 = VersionCompatibility.EarlySemVer.isCompatible("1.2.0", "1.2.4")
@@ -320,6 +322,8 @@ assert(semVerCheck2)
 assert(!semVerCheck3)
 ```
 
+`Strict` doesn't allow for any difference between two versions, but a version only has to be in
+the interval of an interval constraint, like `1.2+` here:
 ```scala mdoc
 val strictCheck1 = VersionCompatibility.Strict.isCompatible("1.2.0", "1.2.4")
 val strictCheck2 = VersionCompatibility.Strict.isCompatible("1.2+", "1.2.4")
@@ -330,4 +334,33 @@ val strictCheck3 = VersionCompatibility.Strict.isCompatible("2.1.3", "1.2.4")
 assert(!strictCheck1)
 assert(strictCheck2)
 assert(!strictCheck3)
+```
+
+`minimumCompatibleVersion` gives the lowest version that a version is compatible with:
+```scala mdoc
+val earlySemVerMin = VersionCompatibility.EarlySemVer.minimumCompatibleVersion("1.2.4")
+val earlySemVerMin0 = VersionCompatibility.EarlySemVer.minimumCompatibleVersion("0.6.3")
+val semVerSpecMin0 = VersionCompatibility.SemVerSpec.minimumCompatibleVersion("0.6.3")
+val packVerMin = VersionCompatibility.PackVer.minimumCompatibleVersion("1.2.4")
+```
+
+```scala mdoc:passthrough
+assert(earlySemVerMin == "1")
+assert(earlySemVerMin0 == "0.6")
+assert(semVerSpecMin0 == "0.6.3")
+assert(packVerMin == "1.2")
+```
+
+`VersionCompatibility` instances can be parsed from strings, among `default`, `always`, `strict`,
+`early-semver`, `semver-spec`, and `pvp`. Beware that `semver` throws an exception rather than
+returning `None`, as it's ambiguous between `early-semver` and `semver-spec`.
+```scala mdoc
+val parsedCompatibility = VersionCompatibility("early-semver")
+val unknownCompatibility = VersionCompatibility("foo")
+```
+
+```scala mdoc:passthrough
+assert(parsedCompatibility == Some(VersionCompatibility.EarlySemVer))
+assert(unknownCompatibility.isEmpty)
+assert(scala.util.Try(VersionCompatibility("semver")).isFailure)
 ```
