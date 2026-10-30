@@ -150,6 +150,40 @@ assert(noOverlap.isEmpty)
 assert(relaxed.asString == "[1.2,1.3)")
 ```
 
+## `VersionInterval`
+
+`VersionInterval` represents the interval part of a version constraint. Its bounds are
+compared with `compareSemantic`.
+
+```scala mdoc
+val interval = VersionParse.versionInterval("[1.2,1.3)").get
+val inInterval = interval.contains(Version("1.2.5"))
+val upperBound = interval.contains(Version("1.3"))
+val intersection = interval.merge(VersionParse.versionInterval("[1.2.5,)").get)
+val noIntersection = interval.merge(VersionParse.versionInterval("[1.4,)").get)
+val invalid = VersionParse.versionInterval("[1.3,1.2)").get.isValid
+```
+
+```scala mdoc:passthrough
+assert(inInterval)
+assert(!upperBound)
+assert(intersection.map(_.repr) == Some("[1.2.5,1.3)"))
+assert(noIntersection.isEmpty)
+assert(!invalid)
+```
+
+`VersionParse` also parses Ivy-like selectors, and the multi-interval syntax of Maven, of which
+only the last interval is retained:
+```scala mdoc
+val ivySelector = VersionParse.ivyLatestSubRevisionInterval("1.2.+")
+val multiInterval = VersionParse.multiVersionInterval("[1.0,1.2),[1.3,)")
+```
+
+```scala mdoc:passthrough
+assert(ivySelector.map(_.repr) == Some("[1.2,1.2.max]"))
+assert(multiInterval.map(_.repr) == Some("[1.3,)"))
+```
+
 ## `ModuleMatcher`
 
 `ModuleMatcher` aims at representing glob-based module matchers, like

@@ -206,6 +206,63 @@ val relaxed = VersionConstraint.relaxedMerge(
 ```
 
 
+## `VersionInterval`
+
+`VersionInterval` represents the interval part of a version constraint. Its bounds are
+compared with `compareSemantic`.
+
+```scala
+val interval = VersionParse.versionInterval("[1.2,1.3)").get
+// interval: VersionInterval = VersionInterval(
+//   from = Some(value = Version(repr = "1.2")),
+//   to = Some(value = Version(repr = "1.3")),
+//   fromIncluded = true,
+//   toIncluded = false
+// )
+val inInterval = interval.contains(Version("1.2.5"))
+// inInterval: Boolean = true
+val upperBound = interval.contains(Version("1.3"))
+// upperBound: Boolean = false
+val intersection = interval.merge(VersionParse.versionInterval("[1.2.5,)").get)
+// intersection: Option[VersionInterval] = Some(
+//   value = VersionInterval(
+//     from = Some(value = Version(repr = "1.2.5")),
+//     to = Some(value = Version(repr = "1.3")),
+//     fromIncluded = true,
+//     toIncluded = false
+//   )
+// )
+val noIntersection = interval.merge(VersionParse.versionInterval("[1.4,)").get)
+// noIntersection: Option[VersionInterval] = None
+val invalid = VersionParse.versionInterval("[1.3,1.2)").get.isValid
+// invalid: Boolean = false
+```
+
+
+`VersionParse` also parses Ivy-like selectors, and the multi-interval syntax of Maven, of which
+only the last interval is retained:
+```scala
+val ivySelector = VersionParse.ivyLatestSubRevisionInterval("1.2.+")
+// ivySelector: Option[VersionInterval] = Some(
+//   value = VersionInterval(
+//     from = Some(value = Version(repr = "1.2")),
+//     to = Some(value = Version(repr = "1.2.max")),
+//     fromIncluded = true,
+//     toIncluded = true
+//   )
+// )
+val multiInterval = VersionParse.multiVersionInterval("[1.0,1.2),[1.3,)")
+// multiInterval: Option[VersionInterval] = Some(
+//   value = VersionInterval(
+//     from = Some(value = Version(repr = "1.3")),
+//     to = None,
+//     fromIncluded = true,
+//     toIncluded = false
+//   )
+// )
+```
+
+
 ## `ModuleMatcher`
 
 `ModuleMatcher` aims at representing glob-based module matchers, like
