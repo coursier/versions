@@ -120,6 +120,36 @@ assert(simpleVersionConstraint.preferred == Some(Version("1.4.2")))
 
 Like for versions, parsing is meant to be very loose, trying to make sense of any input.
 
+Use `VersionConstraint.merge` to find a constraint satisfying several ones. It keeps the
+intersection of intervals and the highest preferred version, and returns `None` if the input
+constraints can't be reconciled. `VersionConstraint.relaxedMerge` always succeeds, by giving
+up on the lowest constraints when needed.
+```scala mdoc
+val mergedConstraint = VersionConstraint.merge(
+  VersionConstraint("[1.2,1.4)"),
+  VersionConstraint("1.3")
+)
+val highestVersion = VersionConstraint.merge(
+  VersionConstraint("1.2"),
+  VersionConstraint("1.3")
+)
+val noOverlap = VersionConstraint.merge(
+  VersionConstraint("[1.0,1.1)"),
+  VersionConstraint("[1.2,1.3)")
+)
+val relaxed = VersionConstraint.relaxedMerge(
+  VersionConstraint("[1.0,1.1)"),
+  VersionConstraint("[1.2,1.3)")
+)
+```
+
+```scala mdoc:passthrough
+assert(mergedConstraint.map(_.asString) == Some("[1.2,1.4)&1.3"))
+assert(highestVersion.map(_.asString) == Some("1.3"))
+assert(noOverlap.isEmpty)
+assert(relaxed.asString == "[1.2,1.3)")
+```
+
 ## `ModuleMatcher`
 
 `ModuleMatcher` aims at representing glob-based module matchers, like
