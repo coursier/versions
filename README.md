@@ -333,6 +333,22 @@ val matchesCoursier = matcher.matches("io.get-coursier", "coursier_2.13")
 ```
 
 
+`*` matches any sequence of characters. `ModuleMatcher` can also match module attributes, whose
+keys have to be the same as those of the module for it to match:
+```scala
+val attributeMatcher = ModuleMatcher("org.foo", "bar", Map("scalaVersion" -> "2.*"))
+// attributeMatcher: ModuleMatcher = ModuleMatcher(
+//   organizationMatcher = "org.foo",
+//   nameMatcher = "bar",
+//   attributeMatchers = Map("scalaVersion" -> "2.*")
+// )
+val matchesAttributes = attributeMatcher.matches("org.foo", "bar", Map("scalaVersion" -> "2.13"))
+// matchesAttributes: Boolean = true
+val missingAttributes = attributeMatcher.matches("org.foo", "bar")
+// missingAttributes: Boolean = false
+```
+
+
 ## `ModuleMatchers`
 
 Slightly more powerful than [`ModuleMatcher`](#modulematcher), `ModuleMatchers` can
@@ -359,6 +375,60 @@ val notScalaLib = allButScalaLib.matches("io.get-coursier", "coursier_2.13")
 // notScalaLib: Boolean = true
 val scalaLib = allButScalaLib.matches("org.scala-lang", "scala-library")
 // scalaLib: Boolean = false
+```
+
+
+`include` takes precedence over `exclude` if modules are included by default, and the other way
+around if they aren't.
+```scala
+val allButScalaLangExceptLibrary = ModuleMatchers(
+  exclude = Set(ModuleMatcher("org.scala-lang", "*")),
+  include = Set(ModuleMatcher("org.scala-lang", "scala-library"))
+)
+// allButScalaLangExceptLibrary: ModuleMatchers = ModuleMatchers(
+//   exclude = Set(
+//     ModuleMatcher(
+//       organizationMatcher = "org.scala-lang",
+//       nameMatcher = "*",
+//       attributeMatchers = Map()
+//     )
+//   ),
+//   include = Set(
+//     ModuleMatcher(
+//       organizationMatcher = "org.scala-lang",
+//       nameMatcher = "scala-library",
+//       attributeMatchers = Map()
+//     )
+//   ),
+//   includeByDefault = true
+// )
+val scalaLibIncluded = allButScalaLangExceptLibrary.matches("org.scala-lang", "scala-library")
+// scalaLibIncluded: Boolean = true
+val scalaReflectExcluded = allButScalaLangExceptLibrary.matches("org.scala-lang", "scala-reflect")
+// scalaReflectExcluded: Boolean = false
+```
+
+
+`ModuleMatchers.all` matches all modules, and `ModuleMatchers.only` only a given one:
+```scala
+val matchesAll = ModuleMatchers.all.matches("io.get-coursier", "coursier_2.13")
+// matchesAll: Boolean = true
+val onlyScalaLib = ModuleMatchers.only("org.scala-lang", "scala-library")
+// onlyScalaLib: ModuleMatchers = ModuleMatchers(
+//   exclude = Set(),
+//   include = Set(
+//     ModuleMatcher(
+//       organizationMatcher = "org.scala-lang",
+//       nameMatcher = "scala-library",
+//       attributeMatchers = Map()
+//     )
+//   ),
+//   includeByDefault = false
+// )
+val onlyScalaLibMatches = onlyScalaLib.matches("org.scala-lang", "scala-library")
+// onlyScalaLibMatches: Boolean = true
+val onlyScalaLibOther = onlyScalaLib.matches("io.get-coursier", "coursier_2.13")
+// onlyScalaLibOther: Boolean = false
 ```
 
 

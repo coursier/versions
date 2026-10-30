@@ -232,6 +232,19 @@ assert(matchesScalaXml)
 assert(!matchesCoursier)
 ```
 
+`*` matches any sequence of characters. `ModuleMatcher` can also match module attributes, whose
+keys have to be the same as those of the module for it to match:
+```scala mdoc
+val attributeMatcher = ModuleMatcher("org.foo", "bar", Map("scalaVersion" -> "2.*"))
+val matchesAttributes = attributeMatcher.matches("org.foo", "bar", Map("scalaVersion" -> "2.13"))
+val missingAttributes = attributeMatcher.matches("org.foo", "bar")
+```
+
+```scala mdoc:passthrough
+assert(matchesAttributes)
+assert(!missingAttributes)
+```
+
 ## `ModuleMatchers`
 
 Slightly more powerful than [`ModuleMatcher`](#modulematcher), `ModuleMatchers` can
@@ -250,6 +263,36 @@ val scalaLib = allButScalaLib.matches("org.scala-lang", "scala-library")
 ```scala mdoc:passthrough
 assert(notScalaLib)
 assert(!scalaLib)
+```
+
+`include` takes precedence over `exclude` if modules are included by default, and the other way
+around if they aren't.
+```scala mdoc
+val allButScalaLangExceptLibrary = ModuleMatchers(
+  exclude = Set(ModuleMatcher("org.scala-lang", "*")),
+  include = Set(ModuleMatcher("org.scala-lang", "scala-library"))
+)
+val scalaLibIncluded = allButScalaLangExceptLibrary.matches("org.scala-lang", "scala-library")
+val scalaReflectExcluded = allButScalaLangExceptLibrary.matches("org.scala-lang", "scala-reflect")
+```
+
+```scala mdoc:passthrough
+assert(scalaLibIncluded)
+assert(!scalaReflectExcluded)
+```
+
+`ModuleMatchers.all` matches all modules, and `ModuleMatchers.only` only a given one:
+```scala mdoc
+val matchesAll = ModuleMatchers.all.matches("io.get-coursier", "coursier_2.13")
+val onlyScalaLib = ModuleMatchers.only("org.scala-lang", "scala-library")
+val onlyScalaLibMatches = onlyScalaLib.matches("org.scala-lang", "scala-library")
+val onlyScalaLibOther = onlyScalaLib.matches("io.get-coursier", "coursier_2.13")
+```
+
+```scala mdoc:passthrough
+assert(matchesAll)
+assert(onlyScalaLibMatches)
+assert(!onlyScalaLibOther)
 ```
 
 ## `VersionCompatibility`
