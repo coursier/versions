@@ -443,3 +443,7 @@ than `README.md`, then re-generate the latter with the command below, which requ
 $ ./mill mdoc
 ```
 The version in the [Usage](#usage) section has to be updated by hand after a release.
+
+## License
+
+*coursier-versions* is licensed under the [Apache License, Version 2.0](LICENSE).
