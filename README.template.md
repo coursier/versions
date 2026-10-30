@@ -7,17 +7,18 @@ It's mainly designed around the needs of coursier itself, but can find uses outs
 
 It aims at limiting binary compatibility breakages, and follows semantic versioning.
 While still in `0.x`, backward binary compatibility hasn't been broken between its first release
-up to `0.3.3`. `0.4.0` breaks binary compatibility with former versions.
+up to `0.3.3`. `0.4.0` breaks binary compatibility with former versions. Later releases are
+checked with [MiMa](https://github.com/lightbend-labs/mima) against all the releases after `0.4.0`.
 
 ## Usage
 
 Add to your `build.sbt`:
 ```scala
-libraryDependencies += "io.get-coursier" %% "versions" % "0.3.3"
+libraryDependencies += "io.get-coursier" %% "versions" % "0.6.1"
 ```
 
 The latest version is
-[![Maven Central](https://img.shields.io/maven-central/v/io.get-coursier/versions_2.13.svg)](https://repo1.maven.org/maven2/io/get-coursier/versions_3).
+[![Maven Central](https://img.shields.io/maven-central/v/io.get-coursier/versions_3.svg)](https://central.sonatype.com/artifact/io.get-coursier/versions_3).
 
 All *coursier-versions* classes live under the `coursier.version` namespace. The snippets below
 assume
