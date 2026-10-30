@@ -532,3 +532,21 @@ val earlySemVerReconciliation = ConstraintReconciliation(VersionCompatibility.Ea
 // earlySemVerReconciliation: ConstraintReconciliation = Default
 ```
 
+
+## `Previous`
+
+`Previous.previousStableVersion` guesses the stable version preceding a version. For a version
+with a build metadata part, such as those computed from git tags, that's the part before the `+`.
+It returns `None` if it can't guess that version.
+
+```scala
+val previousOfRelease = Previous.previousStableVersion("1.2.3")
+// previousOfRelease: Option[String] = Some(value = "1.2.2")
+val previousOfMilestone = Previous.previousStableVersion("1.2.3-RC1")
+// previousOfMilestone: Option[String] = Some(value = "1.2.2")
+val previousOfGitVersion = Previous.previousStableVersion("1.2.3+4-abcdef")
+// previousOfGitVersion: Option[String] = Some(value = "1.2.3")
+val noPrevious = Previous.previousStableVersion("1.2.0")
+// noPrevious: Option[String] = None
+```
+

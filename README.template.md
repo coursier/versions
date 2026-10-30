@@ -398,3 +398,23 @@ assert(parsedReconciliation == Some(ConstraintReconciliation.Relaxed))
 assert(alwaysReconciliation == ConstraintReconciliation.Relaxed)
 assert(earlySemVerReconciliation == ConstraintReconciliation.Default)
 ```
+
+## `Previous`
+
+`Previous.previousStableVersion` guesses the stable version preceding a version. For a version
+with a build metadata part, such as those computed from git tags, that's the part before the `+`.
+It returns `None` if it can't guess that version.
+
+```scala mdoc
+val previousOfRelease = Previous.previousStableVersion("1.2.3")
+val previousOfMilestone = Previous.previousStableVersion("1.2.3-RC1")
+val previousOfGitVersion = Previous.previousStableVersion("1.2.3+4-abcdef")
+val noPrevious = Previous.previousStableVersion("1.2.0")
+```
+
+```scala mdoc:passthrough
+assert(previousOfRelease == Some("1.2.2"))
+assert(previousOfMilestone == Some("1.2.2"))
+assert(previousOfGitVersion == Some("1.2.3"))
+assert(noPrevious.isEmpty)
+```
