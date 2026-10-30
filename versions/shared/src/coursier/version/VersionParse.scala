@@ -74,6 +74,9 @@ object VersionParse {
     res
   }
 
+  /**
+   * Parses comma-separated intervals, like `[1.0,1.2),[1.3,)`, retaining only the last one
+   */
   def multiVersionInterval(s: String): Option[VersionInterval] = {
 
     // TODO Use a full-fledged (fastparsed-based) parser for this and versionInterval above

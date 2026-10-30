@@ -7,6 +7,14 @@ import scala.util.matching.Regex
 
 // Adapted from https://github.com/coursier/coursier/blob/876a6604d0cd0c3783ed729f5399549f52a3a385/modules/coursier/shared/src/main/scala/coursier/util/ModuleMatcher.scala
 
+/**
+  * Matches modules from glob-like expressions, in which `*` stands for any sequence of characters
+  *
+  * @param organizationMatcher expression matching module organizations
+  * @param nameMatcher expression matching module names
+  * @param attributeMatchers expressions matching module attributes. Modules have to have exactly
+  *                          those attributes in order to match.
+  */
 case class ModuleMatcher(
   organizationMatcher: String,
   nameMatcher: String,

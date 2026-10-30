@@ -1,5 +1,13 @@
 package coursier.version
 
+/**
+  * An interval of versions, whose bounds are compared with [[Version.compareSemantic]]
+  *
+  * @param from lower bound, if any
+  * @param to upper bound, if any
+  * @param fromIncluded whether the lower bound is part of the interval
+  * @param toIncluded whether the upper bound is part of the interval
+  */
 case class VersionInterval(
   from: Option[Version],
   to: Option[Version],
@@ -7,6 +15,7 @@ case class VersionInterval(
   toIncluded: Boolean
 ) {
 
+  /** Whether the bounds of this interval are in order, and exist if they're said to be included */
   def isValid: Boolean = {
     val fromToOrder =
       for {
@@ -45,6 +54,7 @@ case class VersionInterval(
   def withToIncluded(toIncluded: Boolean): VersionInterval =
     copy(toIncluded = toIncluded)
 
+  /** The intersection of this interval and `other`, if it's not empty */
   def merge(other: VersionInterval): Option[VersionInterval] = {
     val (newFrom, newFromIncluded) =
       (from, other.from) match {

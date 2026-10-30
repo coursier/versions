@@ -2,6 +2,15 @@ package coursier.version
 
 // Adapted from https://github.com/coursier/coursier/blob/f0b10fb1744e5bdf94bf17857dfb3cb19fda2e5b/modules/coursier/shared/src/main/scala/coursier/util/ModuleMatchers.scala
 
+/**
+  * Matches modules from the [[ModuleMatcher]]s they should be excluded or included by
+  *
+  * @param exclude modules to exclude
+  * @param include modules to include
+  * @param includeByDefault if true, modules are matched unless they're excluded and not included.
+  *                         If false, modules aren't matched unless they're included and not
+  *                         excluded.
+  */
 case class ModuleMatchers(
   exclude: Set[ModuleMatcher],
   include: Set[ModuleMatcher] = Set(),
