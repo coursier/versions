@@ -494,3 +494,41 @@ val unknownCompatibility = VersionCompatibility("foo")
 // unknownCompatibility: Option[VersionCompatibility] = None
 ```
 
+
+## `ConstraintReconciliation`
+
+`ConstraintReconciliation` reconciles several version constraints during resolution:
+- `Default`: relies on [`VersionConstraint.merge`](#versionconstraint), fails if intervals don't overlap
+- `Relaxed`: always succeeds, discarding the lowest intervals if they don't overlap
+- `Strict` and `SemVer`: behave like `Default` here. Their actual checks are done by coursier
+during resolution.
+
+```scala
+val conflicting = Seq(VersionConstraint("[1.0,1.1)"), VersionConstraint("[1.2,1.3)"))
+// conflicting: Seq[VersionConstraint] = List(
+//   Lazy(asString = "[1.0,1.1)"),
+//   Lazy(asString = "[1.2,1.3)")
+// )
+val defaultReconciliation = ConstraintReconciliation.Default.reconcile(conflicting)
+// defaultReconciliation: Option[VersionConstraint] = None
+val relaxedReconciliation = ConstraintReconciliation.Relaxed.reconcile(conflicting)
+// relaxedReconciliation: Option[VersionConstraint] = Some(
+//   value = Lazy(asString = "[1.2,1.3)")
+// )
+```
+
+
+Instances can be parsed from `default`, `relaxed`, `strict`, or `semver`, and can be derived from
+a [`VersionCompatibility`](#versioncompatibility). `Always` then corresponds to `Relaxed`, and
+all the others to `Default`.
+```scala
+val parsedReconciliation = ConstraintReconciliation("relaxed")
+// parsedReconciliation: Option[ConstraintReconciliation] = Some(
+//   value = Relaxed
+// )
+val alwaysReconciliation = ConstraintReconciliation(VersionCompatibility.Always)
+// alwaysReconciliation: ConstraintReconciliation = Relaxed
+val earlySemVerReconciliation = ConstraintReconciliation(VersionCompatibility.EarlySemVer)
+// earlySemVerReconciliation: ConstraintReconciliation = Default
+```
+

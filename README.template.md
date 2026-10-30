@@ -364,3 +364,37 @@ assert(parsedCompatibility == Some(VersionCompatibility.EarlySemVer))
 assert(unknownCompatibility.isEmpty)
 assert(scala.util.Try(VersionCompatibility("semver")).isFailure)
 ```
+
+## `ConstraintReconciliation`
+
+`ConstraintReconciliation` reconciles several version constraints during resolution:
+- `Default`: relies on [`VersionConstraint.merge`](#versionconstraint), fails if intervals don't overlap
+- `Relaxed`: always succeeds, discarding the lowest intervals if they don't overlap
+- `Strict` and `SemVer`: behave like `Default` here. Their actual checks are done by coursier
+during resolution.
+
+```scala mdoc
+val conflicting = Seq(VersionConstraint("[1.0,1.1)"), VersionConstraint("[1.2,1.3)"))
+val defaultReconciliation = ConstraintReconciliation.Default.reconcile(conflicting)
+val relaxedReconciliation = ConstraintReconciliation.Relaxed.reconcile(conflicting)
+```
+
+```scala mdoc:passthrough
+assert(defaultReconciliation.isEmpty)
+assert(relaxedReconciliation.map(_.asString) == Some("[1.2,1.3)"))
+```
+
+Instances can be parsed from `default`, `relaxed`, `strict`, or `semver`, and can be derived from
+a [`VersionCompatibility`](#versioncompatibility). `Always` then corresponds to `Relaxed`, and
+all the others to `Default`.
+```scala mdoc
+val parsedReconciliation = ConstraintReconciliation("relaxed")
+val alwaysReconciliation = ConstraintReconciliation(VersionCompatibility.Always)
+val earlySemVerReconciliation = ConstraintReconciliation(VersionCompatibility.EarlySemVer)
+```
+
+```scala mdoc:passthrough
+assert(parsedReconciliation == Some(ConstraintReconciliation.Relaxed))
+assert(alwaysReconciliation == ConstraintReconciliation.Relaxed)
+assert(earlySemVerReconciliation == ConstraintReconciliation.Default)
+```
