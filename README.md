@@ -12,10 +12,35 @@ checked with [MiMa](https://github.com/lightbend-labs/mima) against all the rele
 
 ## Usage
 
-Add to your `build.sbt`:
+With sbt, add to your `build.sbt`:
 ```scala
 libraryDependencies += "io.get-coursier" %% "versions" % "0.6.1"
+// or, for Scala.js and Scala Native
+libraryDependencies += "io.get-coursier" %%% "versions" % "0.6.1"
 ```
+
+With Mill, add to your module:
+```scala
+def mvnDeps = Seq(mvn"io.get-coursier::versions:0.6.1")
+// or, for Scala.js and Scala Native
+def mvnDeps = Seq(mvn"io.get-coursier::versions::0.6.1")
+```
+
+With Scala CLI:
+```scala
+//> using dep io.get-coursier::versions:0.6.1
+```
+
+*coursier-versions* is available for the following platforms:
+
+| Platform     | Scala versions  |
+|--------------|-----------------|
+| JVM          | 2.12, 2.13, 3   |
+| Scala.js     | 2.13, 3         |
+| Scala Native | 2.13, 3         |
+
+Scala 3 and Scala Native artifacts are available since `0.6.0`. Scala 2.12 artifacts for Scala.js
+aren't published anymore since `0.6.1`.
 
 The latest version is
 [![Maven Central](https://img.shields.io/maven-central/v/io.get-coursier/versions_3.svg)](https://central.sonatype.com/artifact/io.get-coursier/versions_3).
