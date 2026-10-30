@@ -184,6 +184,40 @@ assert(ivySelector.map(_.repr) == Some("[1.2,1.2.max]"))
 assert(multiInterval.map(_.repr) == Some("[1.3,)"))
 ```
 
+## `Latest`
+
+`Latest` represents the `latest.integration`, `latest.release`, and `latest.stable` selectors.
+The `LATEST` and `RELEASE` meta versions of Maven 2 are accepted too, and correspond to
+`latest.integration` and `latest.release`.
+
+```scala mdoc
+val latestRelease = Latest("latest.release")
+val mavenLatest = Latest("LATEST")
+val notLatest = Latest("1.2")
+val latestConstraint = VersionParse.versionConstraint("latest.stable")
+val latestOfConstraint = latestConstraint.latest
+```
+
+```scala mdoc:passthrough
+assert(latestRelease == Some(Latest.Release))
+assert(mavenLatest == Some(Latest.Integration))
+assert(notLatest.isEmpty)
+assert(latestOfConstraint == Some(Latest.Stable))
+```
+
+`Latest` values are ordered, from `Stable` to `Release` to `Integration`. When merging constraints,
+the highest one is retained. Picking an actual version out of them is left to coursier.
+```scala mdoc
+val mergedLatest = VersionConstraint.merge(
+  VersionConstraint("latest.stable"),
+  VersionConstraint("latest.release")
+)
+```
+
+```scala mdoc:passthrough
+assert(mergedLatest.flatMap(_.latest) == Some(Latest.Release))
+```
+
 ## `ModuleMatcher`
 
 `ModuleMatcher` aims at representing glob-based module matchers, like

@@ -263,6 +263,59 @@ val multiInterval = VersionParse.multiVersionInterval("[1.0,1.2),[1.3,)")
 ```
 
 
+## `Latest`
+
+`Latest` represents the `latest.integration`, `latest.release`, and `latest.stable` selectors.
+The `LATEST` and `RELEASE` meta versions of Maven 2 are accepted too, and correspond to
+`latest.integration` and `latest.release`.
+
+```scala
+val latestRelease = Latest("latest.release")
+// latestRelease: Option[Latest] = Some(value = Release)
+val mavenLatest = Latest("LATEST")
+// mavenLatest: Option[Latest] = Some(value = Integration)
+val notLatest = Latest("1.2")
+// notLatest: Option[Latest] = None
+val latestConstraint = VersionParse.versionConstraint("latest.stable")
+// latestConstraint: VersionConstraint = Eager(
+//   asString = "latest.stable",
+//   interval = VersionInterval(
+//     from = None,
+//     to = None,
+//     fromIncluded = false,
+//     toIncluded = false
+//   ),
+//   preferred = None,
+//   latest = Some(value = Stable)
+// )
+val latestOfConstraint = latestConstraint.latest
+// latestOfConstraint: Option[Latest] = Some(value = Stable)
+```
+
+
+`Latest` values are ordered, from `Stable` to `Release` to `Integration`. When merging constraints,
+the highest one is retained. Picking an actual version out of them is left to coursier.
+```scala
+val mergedLatest = VersionConstraint.merge(
+  VersionConstraint("latest.stable"),
+  VersionConstraint("latest.release")
+)
+// mergedLatest: Option[VersionConstraint] = Some(
+//   value = Eager(
+//     asString = "latest.release",
+//     interval = VersionInterval(
+//       from = None,
+//       to = None,
+//       fromIncluded = false,
+//       toIncluded = false
+//     ),
+//     preferred = None,
+//     latest = Some(value = Release)
+//   )
+// )
+```
+
+
 ## `ModuleMatcher`
 
 `ModuleMatcher` aims at representing glob-based module matchers, like
