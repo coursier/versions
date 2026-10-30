@@ -5,18 +5,19 @@
 
 It's mainly designed around the needs of coursier itself, but can find uses outside of it.
 
-It aims at not breaking backward binary compatibility, and follows semantic versioning.
-While still in `0.x`, backward binary compatibility hasn't been broken since its first release.
+It aims at limiting binary compatibility breakages, and follows semantic versioning.
+While still in `0.x`, backward binary compatibility hasn't been broken between its first release
+up to `0.3.3`. `0.4.0` breaks binary compatibility with former versions.
 
 ## Usage
 
 Add to your `build.sbt`:
 ```scala
-libraryDependencies += "io.get-coursier" %% "versions" % "0.2.1"
+libraryDependencies += "io.get-coursier" %% "versions" % "0.3.3"
 ```
 
 The latest version is
-[![Maven Central](https://img.shields.io/maven-central/v/io.get-coursier/versions_2.13.svg)](https://maven-badges.herokuapp.com/maven-central/io.get-coursier/versions_2.13).
+[![Maven Central](https://img.shields.io/maven-central/v/io.get-coursier/versions_2.13.svg)](https://repo1.maven.org/maven2/io/get-coursier/versions_3).
 
 All *coursier-versions* classes live under the `coursier.version` namespace. The snippets below
 assume
@@ -64,13 +65,10 @@ Use `compareSemantic` to compare versions up to that equivalence - it returns `0
 that only differ by padding, separators, build metadata, or a release qualifier like `Final` or
 `GA`. This is the order that decides whether a version sits in an interval, or whether two
 constraints can be reconciled:
-```scala
+```scala mdoc
 Version("1.0").compare(Version("1.0.0"))
-// res: Int = -2
 Version("1.0").compareSemantic(Version("1.0.0"))
-// res: Int = 0
 Version("1.1.0").compareSemantic(Version("1.1.0.Final"))
-// res: Int = 0
 ```
 
 ## `VersionConstraint`
@@ -86,9 +84,12 @@ val simpleVersionConstraint = VersionParse.versionConstraint("1.4.2")
 ```
 
 ```scala mdoc:passthrough
-assert(intervalConstraint == VersionConstraint(VersionInterval(Some(Version("1.2")), Some(Version("1.3")), true, false), Nil))
-assert(intervalSelectorConstraint == VersionConstraint(VersionInterval(Some(Version("1.2")), Some(Version("1.2.max")), true, true), Nil))
-assert(simpleVersionConstraint == VersionConstraint(VersionInterval(None, None, false, false), Seq(Version("1.4.2"))))
+assert(intervalConstraint.interval == VersionInterval(Some(Version("1.2")), Some(Version("1.3")), true, false))
+assert(intervalConstraint.preferred.isEmpty)
+assert(intervalSelectorConstraint.interval == VersionInterval(Some(Version("1.2")), Some(Version("1.2.max")), true, true))
+assert(intervalSelectorConstraint.preferred.isEmpty)
+assert(simpleVersionConstraint.interval == VersionInterval(None, None, false, false))
+assert(simpleVersionConstraint.preferred == Some(Version("1.4.2")))
 ```
 
 Like for versions, parsing is meant to be very loose, trying to make sense of any input.
