@@ -280,23 +280,24 @@ object versions extends Module {
 }
 
 
-def readme = Task.Source("README.md")
+def readmeTemplate = Task.Source("README.template.md")
 
 private def mdocScalaVersion = DepVersions.scala213
-def mdoc(args: String*) = Task.Command {
-  val readme0 = readme().path
-  val dest = Task.dest / "README.md"
+// Generates README.md from README.template.md, pass --check to only check that it's up-to-date
+def mdoc(args: mill.api.Args) = Task.Command {
+  val template = readmeTemplate().path
+  val dest = BuildCtx.workspaceRoot / "README.md"
   val cp = (versions.jvm(mdocScalaVersion).runClasspath() :+ versions.jvm(mdocScalaVersion).jar())
     .map(_.path)
     .filter(os.exists(_))
     .filter(!os.isDir(_))
   val cmd = Seq("cs", "launch", s"mdoc:${DepVersions.mdoc}", "--scala", mdocScalaVersion)
   val mdocArgs = Seq(
-    "--in", readme0.toString,
+    "--in", template.toString,
     "--out", dest.toString,
     "--classpath", cp.mkString(File.pathSeparator)
   )
-  os.proc(cmd, "--", mdocArgs, args).call(
+  os.proc(cmd, "--", mdocArgs, args.value).call(
     cwd = BuildCtx.workspaceRoot,
     stdin = os.Inherit,
     stdout = os.Inherit,

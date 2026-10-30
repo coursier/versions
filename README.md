@@ -73,11 +73,11 @@ that only differ by padding, separators, build metadata, or a release qualifier 
 constraints can be reconciled:
 ```scala
 Version("1.0").compare(Version("1.0.0"))
-// res: Int = -2
+// res1: Int = -2
 Version("1.0").compareSemantic(Version("1.0.0"))
-// res: Int = 0
+// res2: Int = 0
 Version("1.1.0").compareSemantic(Version("1.1.0.Final"))
-// res: Int = 0
+// res3: Int = 0
 ```
 
 ## `VersionConstraint`
@@ -88,34 +88,40 @@ interval selectors such as `1.2+`.
 Parse a version constraint with
 ```scala
 val intervalConstraint = VersionParse.versionConstraint("[1.2,1.3)")
-// intervalConstraint: VersionConstraint = VersionConstraint(
+// intervalConstraint: VersionConstraint = Eager(
+//   asString = "[1.2,1.3)",
 //   interval = VersionInterval(
 //     from = Some(value = Version(repr = "1.2")),
 //     to = Some(value = Version(repr = "1.3")),
 //     fromIncluded = true,
 //     toIncluded = false
 //   ),
-//   preferred = List()
+//   preferred = None,
+//   latest = None
 // )
 val intervalSelectorConstraint = VersionParse.versionConstraint("1.2+")
-// intervalSelectorConstraint: VersionConstraint = VersionConstraint(
+// intervalSelectorConstraint: VersionConstraint = Eager(
+//   asString = "1.2+",
 //   interval = VersionInterval(
 //     from = Some(value = Version(repr = "1.2")),
 //     to = Some(value = Version(repr = "1.2.max")),
 //     fromIncluded = true,
 //     toIncluded = true
 //   ),
-//   preferred = List()
+//   preferred = None,
+//   latest = None
 // )
 val simpleVersionConstraint = VersionParse.versionConstraint("1.4.2")
-// simpleVersionConstraint: VersionConstraint = VersionConstraint(
+// simpleVersionConstraint: VersionConstraint = Eager(
+//   asString = "1.4.2",
 //   interval = VersionInterval(
 //     from = None,
 //     to = None,
 //     fromIncluded = false,
 //     toIncluded = false
 //   ),
-//   preferred = List(Version(repr = "1.4.2"))
+//   preferred = Some(value = Version(repr = "1.4.2")),
+//   latest = None
 // )
 ```
 
