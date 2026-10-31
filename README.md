@@ -7,17 +7,43 @@ It's mainly designed around the needs of coursier itself, but can find uses outs
 
 It aims at limiting binary compatibility breakages, and follows semantic versioning.
 While still in `0.x`, backward binary compatibility hasn't been broken between its first release
-up to `0.3.3`. `0.4.0` breaks binary compatibility with former versions.
+up to `0.3.3`. `0.4.0` breaks binary compatibility with former versions. Later releases are
+checked with [MiMa](https://github.com/lightbend-labs/mima) against all the releases after `0.4.0`.
 
 ## Usage
 
-Add to your `build.sbt`:
+With sbt, add to your `build.sbt`:
 ```scala
-libraryDependencies += "io.get-coursier" %% "versions" % "0.3.3"
+libraryDependencies += "io.get-coursier" %% "versions" % "0.6.1"
+// or, for Scala.js and Scala Native
+libraryDependencies += "io.get-coursier" %%% "versions" % "0.6.1"
 ```
 
+With Mill, add to your module:
+```scala
+def mvnDeps = Seq(mvn"io.get-coursier::versions:0.6.1")
+// or, for Scala.js and Scala Native
+def mvnDeps = Seq(mvn"io.get-coursier::versions::0.6.1")
+```
+
+With Scala CLI:
+```scala
+//> using dep io.get-coursier::versions:0.6.1
+```
+
+*coursier-versions* is available for the following platforms:
+
+| Platform     | Scala versions  |
+|--------------|-----------------|
+| JVM          | 2.12, 2.13, 3   |
+| Scala.js     | 2.13, 3         |
+| Scala Native | 2.13, 3         |
+
+Scala 3 and Scala Native artifacts are available since `0.6.0`. Scala 2.12 artifacts for Scala.js
+aren't published anymore since `0.6.1`.
+
 The latest version is
-[![Maven Central](https://img.shields.io/maven-central/v/io.get-coursier/versions_2.13.svg)](https://repo1.maven.org/maven2/io/get-coursier/versions_3).
+[![Maven Central](https://img.shields.io/maven-central/v/io.get-coursier/versions_3.svg)](https://central.sonatype.com/artifact/io.get-coursier/versions_3).
 
 All *coursier-versions* classes live under the `coursier.version` namespace. The snippets below
 assume
@@ -73,11 +99,11 @@ that only differ by padding, separators, build metadata, or a release qualifier 
 constraints can be reconciled:
 ```scala
 Version("1.0").compare(Version("1.0.0"))
-// res: Int = -2
+// res1: Int = -2
 Version("1.0").compareSemantic(Version("1.0.0"))
-// res: Int = 0
+// res2: Int = 0
 Version("1.1.0").compareSemantic(Version("1.1.0.Final"))
-// res: Int = 0
+// res3: Int = 0
 ```
 
 ## `VersionConstraint`
@@ -88,39 +114,207 @@ interval selectors such as `1.2+`.
 Parse a version constraint with
 ```scala
 val intervalConstraint = VersionParse.versionConstraint("[1.2,1.3)")
-// intervalConstraint: VersionConstraint = VersionConstraint(
+// intervalConstraint: VersionConstraint = Eager(
+//   asString = "[1.2,1.3)",
 //   interval = VersionInterval(
 //     from = Some(value = Version(repr = "1.2")),
 //     to = Some(value = Version(repr = "1.3")),
 //     fromIncluded = true,
 //     toIncluded = false
 //   ),
-//   preferred = List()
+//   preferred = None,
+//   latest = None
 // )
 val intervalSelectorConstraint = VersionParse.versionConstraint("1.2+")
-// intervalSelectorConstraint: VersionConstraint = VersionConstraint(
+// intervalSelectorConstraint: VersionConstraint = Eager(
+//   asString = "1.2+",
 //   interval = VersionInterval(
 //     from = Some(value = Version(repr = "1.2")),
 //     to = Some(value = Version(repr = "1.2.max")),
 //     fromIncluded = true,
 //     toIncluded = true
 //   ),
-//   preferred = List()
+//   preferred = None,
+//   latest = None
 // )
 val simpleVersionConstraint = VersionParse.versionConstraint("1.4.2")
-// simpleVersionConstraint: VersionConstraint = VersionConstraint(
+// simpleVersionConstraint: VersionConstraint = Eager(
+//   asString = "1.4.2",
 //   interval = VersionInterval(
 //     from = None,
 //     to = None,
 //     fromIncluded = false,
 //     toIncluded = false
 //   ),
-//   preferred = List(Version(repr = "1.4.2"))
+//   preferred = Some(value = Version(repr = "1.4.2")),
+//   latest = None
 // )
 ```
 
 
 Like for versions, parsing is meant to be very loose, trying to make sense of any input.
+
+Use `VersionConstraint.merge` to find a constraint satisfying several ones. It keeps the
+intersection of intervals and the highest preferred version, and returns `None` if the input
+constraints can't be reconciled. `VersionConstraint.relaxedMerge` always succeeds, by giving
+up on the lowest constraints when needed.
+```scala
+val mergedConstraint = VersionConstraint.merge(
+  VersionConstraint("[1.2,1.4)"),
+  VersionConstraint("1.3")
+)
+// mergedConstraint: Option[VersionConstraint] = Some(
+//   value = Eager(
+//     asString = "[1.2,1.4)&1.3",
+//     interval = VersionInterval(
+//       from = Some(value = Version(repr = "1.2")),
+//       to = Some(value = Version(repr = "1.4")),
+//       fromIncluded = true,
+//       toIncluded = false
+//     ),
+//     preferred = Some(value = Version(repr = "1.3")),
+//     latest = None
+//   )
+// )
+val highestVersion = VersionConstraint.merge(
+  VersionConstraint("1.2"),
+  VersionConstraint("1.3")
+)
+// highestVersion: Option[VersionConstraint] = Some(
+//   value = Eager(
+//     asString = "1.3",
+//     interval = VersionInterval(
+//       from = None,
+//       to = None,
+//       fromIncluded = false,
+//       toIncluded = false
+//     ),
+//     preferred = Some(value = Version(repr = "1.3")),
+//     latest = None
+//   )
+// )
+val noOverlap = VersionConstraint.merge(
+  VersionConstraint("[1.0,1.1)"),
+  VersionConstraint("[1.2,1.3)")
+)
+// noOverlap: Option[VersionConstraint] = None
+val relaxed = VersionConstraint.relaxedMerge(
+  VersionConstraint("[1.0,1.1)"),
+  VersionConstraint("[1.2,1.3)")
+)
+// relaxed: VersionConstraint = Lazy(asString = "[1.2,1.3)")
+```
+
+
+## `VersionInterval`
+
+`VersionInterval` represents the interval part of a version constraint. Its bounds are
+compared with `compareSemantic`.
+
+```scala
+val interval = VersionParse.versionInterval("[1.2,1.3)").get
+// interval: VersionInterval = VersionInterval(
+//   from = Some(value = Version(repr = "1.2")),
+//   to = Some(value = Version(repr = "1.3")),
+//   fromIncluded = true,
+//   toIncluded = false
+// )
+val inInterval = interval.contains(Version("1.2.5"))
+// inInterval: Boolean = true
+val upperBound = interval.contains(Version("1.3"))
+// upperBound: Boolean = false
+val intersection = interval.merge(VersionParse.versionInterval("[1.2.5,)").get)
+// intersection: Option[VersionInterval] = Some(
+//   value = VersionInterval(
+//     from = Some(value = Version(repr = "1.2.5")),
+//     to = Some(value = Version(repr = "1.3")),
+//     fromIncluded = true,
+//     toIncluded = false
+//   )
+// )
+val noIntersection = interval.merge(VersionParse.versionInterval("[1.4,)").get)
+// noIntersection: Option[VersionInterval] = None
+val invalid = VersionParse.versionInterval("[1.3,1.2)").get.isValid
+// invalid: Boolean = false
+```
+
+
+`VersionParse` also parses Ivy-like selectors, and the multi-interval syntax of Maven, of which
+only the last interval is retained:
+```scala
+val ivySelector = VersionParse.ivyLatestSubRevisionInterval("1.2.+")
+// ivySelector: Option[VersionInterval] = Some(
+//   value = VersionInterval(
+//     from = Some(value = Version(repr = "1.2")),
+//     to = Some(value = Version(repr = "1.2.max")),
+//     fromIncluded = true,
+//     toIncluded = true
+//   )
+// )
+val multiInterval = VersionParse.multiVersionInterval("[1.0,1.2),[1.3,)")
+// multiInterval: Option[VersionInterval] = Some(
+//   value = VersionInterval(
+//     from = Some(value = Version(repr = "1.3")),
+//     to = None,
+//     fromIncluded = true,
+//     toIncluded = false
+//   )
+// )
+```
+
+
+## `Latest`
+
+`Latest` represents the `latest.integration`, `latest.release`, and `latest.stable` selectors.
+The `LATEST` and `RELEASE` meta versions of Maven 2 are accepted too, and correspond to
+`latest.integration` and `latest.release`.
+
+```scala
+val latestRelease = Latest("latest.release")
+// latestRelease: Option[Latest] = Some(value = Release)
+val mavenLatest = Latest("LATEST")
+// mavenLatest: Option[Latest] = Some(value = Integration)
+val notLatest = Latest("1.2")
+// notLatest: Option[Latest] = None
+val latestConstraint = VersionParse.versionConstraint("latest.stable")
+// latestConstraint: VersionConstraint = Eager(
+//   asString = "latest.stable",
+//   interval = VersionInterval(
+//     from = None,
+//     to = None,
+//     fromIncluded = false,
+//     toIncluded = false
+//   ),
+//   preferred = None,
+//   latest = Some(value = Stable)
+// )
+val latestOfConstraint = latestConstraint.latest
+// latestOfConstraint: Option[Latest] = Some(value = Stable)
+```
+
+
+`Latest` values are ordered, from `Stable` to `Release` to `Integration`. When merging constraints,
+the highest one is retained. Picking an actual version out of them is left to coursier.
+```scala
+val mergedLatest = VersionConstraint.merge(
+  VersionConstraint("latest.stable"),
+  VersionConstraint("latest.release")
+)
+// mergedLatest: Option[VersionConstraint] = Some(
+//   value = Eager(
+//     asString = "latest.release",
+//     interval = VersionInterval(
+//       from = None,
+//       to = None,
+//       fromIncluded = false,
+//       toIncluded = false
+//     ),
+//     preferred = None,
+//     latest = Some(value = Release)
+//   )
+// )
+```
+
 
 ## `ModuleMatcher`
 
@@ -136,6 +330,22 @@ val matchesScalaXml = matcher.matches("org.scala-lang.modules", "scala-xml_2.13"
 // matchesScalaXml: Boolean = true
 val matchesCoursier = matcher.matches("io.get-coursier", "coursier_2.13")
 // matchesCoursier: Boolean = false
+```
+
+
+`*` matches any sequence of characters. `ModuleMatcher` can also match module attributes, whose
+keys have to be the same as those of the module for it to match:
+```scala
+val attributeMatcher = ModuleMatcher("org.foo", "bar", Map("scalaVersion" -> "2.*"))
+// attributeMatcher: ModuleMatcher = ModuleMatcher(
+//   organizationMatcher = "org.foo",
+//   nameMatcher = "bar",
+//   attributeMatchers = Map("scalaVersion" -> "2.*")
+// )
+val matchesAttributes = attributeMatcher.matches("org.foo", "bar", Map("scalaVersion" -> "2.13"))
+// matchesAttributes: Boolean = true
+val missingAttributes = attributeMatcher.matches("org.foo", "bar")
+// missingAttributes: Boolean = false
 ```
 
 
@@ -168,6 +378,60 @@ val scalaLib = allButScalaLib.matches("org.scala-lang", "scala-library")
 ```
 
 
+`include` takes precedence over `exclude` if modules are included by default, and the other way
+around if they aren't.
+```scala
+val allButScalaLangExceptLibrary = ModuleMatchers(
+  exclude = Set(ModuleMatcher("org.scala-lang", "*")),
+  include = Set(ModuleMatcher("org.scala-lang", "scala-library"))
+)
+// allButScalaLangExceptLibrary: ModuleMatchers = ModuleMatchers(
+//   exclude = Set(
+//     ModuleMatcher(
+//       organizationMatcher = "org.scala-lang",
+//       nameMatcher = "*",
+//       attributeMatchers = Map()
+//     )
+//   ),
+//   include = Set(
+//     ModuleMatcher(
+//       organizationMatcher = "org.scala-lang",
+//       nameMatcher = "scala-library",
+//       attributeMatchers = Map()
+//     )
+//   ),
+//   includeByDefault = true
+// )
+val scalaLibIncluded = allButScalaLangExceptLibrary.matches("org.scala-lang", "scala-library")
+// scalaLibIncluded: Boolean = true
+val scalaReflectExcluded = allButScalaLangExceptLibrary.matches("org.scala-lang", "scala-reflect")
+// scalaReflectExcluded: Boolean = false
+```
+
+
+`ModuleMatchers.all` matches all modules, and `ModuleMatchers.only` only a given one:
+```scala
+val matchesAll = ModuleMatchers.all.matches("io.get-coursier", "coursier_2.13")
+// matchesAll: Boolean = true
+val onlyScalaLib = ModuleMatchers.only("org.scala-lang", "scala-library")
+// onlyScalaLib: ModuleMatchers = ModuleMatchers(
+//   exclude = Set(),
+//   include = Set(
+//     ModuleMatcher(
+//       organizationMatcher = "org.scala-lang",
+//       nameMatcher = "scala-library",
+//       attributeMatchers = Map()
+//     )
+//   ),
+//   includeByDefault = false
+// )
+val onlyScalaLibMatches = onlyScalaLib.matches("org.scala-lang", "scala-library")
+// onlyScalaLibMatches: Boolean = true
+val onlyScalaLibOther = onlyScalaLib.matches("io.get-coursier", "coursier_2.13")
+// onlyScalaLibOther: Boolean = false
+```
+
+
 ## `VersionCompatibility`
 
 `VersionCompatibility` checks whether two versions, or a version constraint and a version,
@@ -177,9 +441,11 @@ The following algorithms are available:
 - `EarlySemVer`: early semantic versioning that keeps 0.6.z bincompat
 - `SemVerSpec`: semantic versioning spec that treats all 0.y.z as initial development
 - `PackVer`: package versioning policy
-- `Strict`: exact match required
+- `Strict`: the version has to be exactly the one of the constraint, or to be in its interval
 - `Always`: assume any input constraint and version match
 - `Default`: currently equal to `PackVer`
+
+`SemVer` is a deprecated alias of `EarlySemVer`.
 
 ```scala
 val semVerCheck1 = VersionCompatibility.EarlySemVer.isCompatible("1.2.0", "1.2.4")
@@ -191,6 +457,8 @@ val semVerCheck3 = VersionCompatibility.EarlySemVer.isCompatible("2.1.3", "1.2.4
 ```
 
 
+`Strict` doesn't allow for any difference between two versions, but a version only has to be in
+the interval of an interval constraint, like `1.2+` here:
 ```scala
 val strictCheck1 = VersionCompatibility.Strict.isCompatible("1.2.0", "1.2.4")
 // strictCheck1: Boolean = false
@@ -200,3 +468,114 @@ val strictCheck3 = VersionCompatibility.Strict.isCompatible("2.1.3", "1.2.4")
 // strictCheck3: Boolean = false
 ```
 
+
+`minimumCompatibleVersion` gives the lowest version that a version is compatible with:
+```scala
+val earlySemVerMin = VersionCompatibility.EarlySemVer.minimumCompatibleVersion("1.2.4")
+// earlySemVerMin: String = "1"
+val earlySemVerMin0 = VersionCompatibility.EarlySemVer.minimumCompatibleVersion("0.6.3")
+// earlySemVerMin0: String = "0.6"
+val semVerSpecMin0 = VersionCompatibility.SemVerSpec.minimumCompatibleVersion("0.6.3")
+// semVerSpecMin0: String = "0.6.3"
+val packVerMin = VersionCompatibility.PackVer.minimumCompatibleVersion("1.2.4")
+// packVerMin: String = "1.2"
+```
+
+
+`VersionCompatibility` instances can be parsed from strings, among `default`, `always`, `strict`,
+`early-semver`, `semver-spec`, and `pvp`. Beware that `semver` throws an exception rather than
+returning `None`, as it's ambiguous between `early-semver` and `semver-spec`.
+```scala
+val parsedCompatibility = VersionCompatibility("early-semver")
+// parsedCompatibility: Option[VersionCompatibility] = Some(
+//   value = EarlySemVer
+// )
+val unknownCompatibility = VersionCompatibility("foo")
+// unknownCompatibility: Option[VersionCompatibility] = None
+```
+
+
+## `ConstraintReconciliation`
+
+`ConstraintReconciliation` reconciles several version constraints during resolution:
+- `Default`: relies on [`VersionConstraint.merge`](#versionconstraint), fails if intervals don't overlap
+- `Relaxed`: always succeeds, discarding the lowest intervals if they don't overlap
+- `Strict` and `SemVer`: behave like `Default` here. Their actual checks are done by coursier
+during resolution.
+
+```scala
+val conflicting = Seq(VersionConstraint("[1.0,1.1)"), VersionConstraint("[1.2,1.3)"))
+// conflicting: Seq[VersionConstraint] = List(
+//   Lazy(asString = "[1.0,1.1)"),
+//   Lazy(asString = "[1.2,1.3)")
+// )
+val defaultReconciliation = ConstraintReconciliation.Default.reconcile(conflicting)
+// defaultReconciliation: Option[VersionConstraint] = None
+val relaxedReconciliation = ConstraintReconciliation.Relaxed.reconcile(conflicting)
+// relaxedReconciliation: Option[VersionConstraint] = Some(
+//   value = Lazy(asString = "[1.2,1.3)")
+// )
+```
+
+
+Instances can be parsed from `default`, `relaxed`, `strict`, or `semver`, and can be derived from
+a [`VersionCompatibility`](#versioncompatibility). `Always` then corresponds to `Relaxed`, and
+all the others to `Default`.
+```scala
+val parsedReconciliation = ConstraintReconciliation("relaxed")
+// parsedReconciliation: Option[ConstraintReconciliation] = Some(
+//   value = Relaxed
+// )
+val alwaysReconciliation = ConstraintReconciliation(VersionCompatibility.Always)
+// alwaysReconciliation: ConstraintReconciliation = Relaxed
+val earlySemVerReconciliation = ConstraintReconciliation(VersionCompatibility.EarlySemVer)
+// earlySemVerReconciliation: ConstraintReconciliation = Default
+```
+
+
+## `Previous`
+
+`Previous.previousStableVersion` guesses the stable version preceding a version. For a version
+with a build metadata part, such as those computed from git tags, that's the part before the `+`.
+It returns `None` if it can't guess that version.
+
+```scala
+val previousOfRelease = Previous.previousStableVersion("1.2.3")
+// previousOfRelease: Option[String] = Some(value = "1.2.2")
+val previousOfMilestone = Previous.previousStableVersion("1.2.3-RC1")
+// previousOfMilestone: Option[String] = Some(value = "1.2.2")
+val previousOfGitVersion = Previous.previousStableVersion("1.2.3+4-abcdef")
+// previousOfGitVersion: Option[String] = Some(value = "1.2.3")
+val noPrevious = Previous.previousStableVersion("1.2.0")
+// noPrevious: Option[String] = None
+```
+
+
+## Contributing
+
+*coursier-versions* is built with [Mill](https://mill-build.org), via the `./mill` launcher at the
+root of this repository.
+
+Run the tests for all platforms and Scala versions, or only for the JVM, with
+```text
+$ ./mill __.test
+$ ./mill versions.jvm.__.test
+```
+
+Check binary compatibility with
+```text
+$ ./mill __.mimaReportBinaryIssues
+```
+
+`README.md` is generated from `README.template.md` with [mdoc](https://scalameta.org/mdoc), so that
+its Scala snippets are compiled and run, and their outputs are up-to-date. Edit the template rather
+than `README.md`, then re-generate the latter with the command below, which requires
+[`cs`](https://get-coursier.io/docs/cli-installation) to be installed:
+```text
+$ ./mill mdoc
+```
+The version in the [Usage](#usage) section has to be updated by hand after a release.
+
+## License
+
+*coursier-versions* is licensed under the [Apache License, Version 2.0](LICENSE).

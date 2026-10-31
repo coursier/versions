@@ -45,7 +45,7 @@ jobs:
       with:
         jvm: 21
     - name: Validate README
-      run: ./mill -i mdoc
+      run: ./mill -i mdoc --check
 
   release:
     runs-on: ubuntu-latest

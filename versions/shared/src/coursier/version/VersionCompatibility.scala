@@ -86,12 +86,10 @@ object VersionCompatibility {
   }
 
   /**
-    * Strict version reconciliation.
+    * Strict version compatibility.
     *
-    * This particular instance behaves the same as [[Default]] when used by
-    * [[coursier.core.Resolution]]. Actual strict conflict manager is handled
-    * by `coursier.params.rule.Strict`, which is set up by `coursier.Resolve`
-    * when a strict reconciliation is added to it.
+    * A version has to be exactly the one of the constraint, or to be in its interval
+    * if it has one.
     */
   case object Strict extends VersionCompatibility {
     def isCompatible(constraint: String, version: String): Boolean =

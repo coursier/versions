@@ -19,6 +19,13 @@ object Previous {
     } yield s"$base${num - 1}"
   }
 
+  /**
+   * Guesses the stable version preceding `version`, if possible
+   *
+   * For a version with build metadata (`1.2.3+4-abcdef`), this is the part before the `+`, if it
+   * doesn't have a pre-release part. Otherwise, the last numeric part of the version is
+   * decremented (`1.2.3` or `1.2.3-RC1` give `1.2.2`).
+   */
   def previousStableVersion(version: String): Option[String] =
     if (version.contains('+')) {
       val stripped = version.takeWhile(_ != '+')
