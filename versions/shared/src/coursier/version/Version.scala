@@ -240,83 +240,83 @@ object Version {
     case object None extends Separator
 
     def apply(str: String): (Item, Stream[(Separator, Item)]) = {
-      def parseItem(s: Stream[Char], prev: Option[Separator]): (Item, Stream[Char]) = {
-        if (s.isEmpty) (empty, s)
-        else if (s.head.isDigit) {
-          def digits(b: StringBuilder, s: Stream[Char]): (String, Stream[Char]) =
-            if (s.isEmpty || !s.head.isDigit) (b.result(), s)
-            else digits(b += s.head, s.tail)
+      def helper(idx: Int): Stream[(Separator, Item)] =
+        if (idx >= str.length) Stream()
+        else {
+          val token = nextToken(str, idx)
+          (token.separator, token.item) #:: helper(token.end)
+        }
 
-          val (digits0, rem) = digits(new StringBuilder, s)
+      val first = firstToken(str)
+      (first.item, helper(first.end))
+    }
+
+    // An item, the separator before it, and the index in the input where parsing resumes.
+    private[version] final class Token(val separator: Separator, val item: Item, val end: Int)
+
+    private[version] def firstToken(str: String): Token =
+      parseItem(str, 0, None)
+
+    // idx must be a valid index of str
+    private[version] def nextToken(str: String, idx: Int): Token =
+      parseSeparator(str.charAt(idx)) match {
+        case Plus => new Token(Plus, BuildMetadata(str.substring(idx + 1)), str.length)
+        case None => parseItem(str, idx, None)
+        case sep  => parseItem(str, idx + 1, sep)
+      }
+
+    private def parseSeparator(c: Char): Separator =
+      c match {
+        case '.' => Dot
+        case '-' => Hyphen
+        case '_' => Underscore
+        case '+' => Plus
+        case _ => None
+      }
+
+    private def parseItem(str: String, start: Int, prev: Separator): Token = {
+      val len = str.length
+      if (start >= len) new Token(prev, empty, start)
+      else {
+        val c = str.charAt(start)
+        var end = start + 1
+        if (c.isDigit) {
+          while (end < len && str.charAt(end).isDigit)
+            end += 1
+
+          val digits0 = str.substring(start, end)
           val item =
             if (digits0.length >= 10) BigNumber(BigInt(digits0))
             else Number(digits0.toInt)
 
-          (item, rem)
-        } else if (s.head.letter) {
-          def letters(b: StringBuilder, s: Stream[Char]): (String, Stream[Char]) =
-            if (s.isEmpty || !s.head.letter)
-              (b.result().toLowerCase, s) // not specifying a Locale (error with scala js)
-            else
-              letters(b += s.head, s.tail)
+          new Token(prev, item, end)
+        } else if (c.letter) {
+          while (end < len && str.charAt(end).letter)
+            end += 1
 
-          val (letters0, rem) = letters(new StringBuilder, s)
+          val letters0 = toLowerCase(str.substring(start, end))
           val item = letters0 match {
-            case "x" if prev == Some(Dot) => Max
+            case "x" if prev == Dot => Max
             case "min" => Min
             case "max" => Max
-            case _     => Tag(Tag.expandAbbreviation(letters0, rem.headOption.exists(_.isDigit)))
+            case _     => Tag(Tag.expandAbbreviation(letters0, end < len && str.charAt(end).isDigit))
           }
-          (item, rem)
-        } else {
-          val (sep, _) = parseSeparator(s)
-          (prev, sep) match {
+          new Token(prev, item, end)
+        } else
+          (prev, parseSeparator(c)) match {
             case (_, None) =>
-              def other(b: StringBuilder, s: Stream[Char]): (String, Stream[Char]) =
-                if (s.isEmpty || s.head.isLetterOrDigit || parseSeparator(s)._1 != None)
-                  (b.result().toLowerCase, s)  // not specifying a Locale (error with scala js)
-                else
-                  other(b += s.head, s.tail)
+              while (end < len && !str.charAt(end).letterOrDigit && parseSeparator(str.charAt(end)) == None)
+                end += 1
 
-              val (item, rem0) = other(new StringBuilder, s)
+              val item = toLowerCase(str.substring(start, end))
               // treat .* as .max
-              if (prev == Some(Dot) && item == "*") (Max, rem0)
-              else (Tag(item), rem0)
+              if (prev == Dot && item == "*") new Token(prev, Max, end)
+              else new Token(prev, Tag(item), end)
             // treat .+ as .max
-            case (Some(Dot), Plus) => (Max, s)
-            case _                 => (empty, s)
+            case (Dot, Plus) => new Token(prev, Max, start)
+            case _           => new Token(prev, empty, start)
           }
-        }
       }
-
-      def parseSeparator(s: Stream[Char]): (Separator, Stream[Char]) = {
-        assert(s.nonEmpty)
-
-        s.head match {
-          case '.' => (Dot, s.tail)
-          case '-' => (Hyphen, s.tail)
-          case '_' => (Underscore, s.tail)
-          case '+' => (Plus, s.tail)
-          case _ => (None, s)
-        }
-      }
-
-      def helper(s: Stream[Char]): Stream[(Separator, Item)] = {
-        if (s.isEmpty) Stream()
-        else {
-          val (sep, rem0) = parseSeparator(s)
-          sep match {
-            case Plus =>
-              Stream((sep, BuildMetadata(rem0.mkString)))
-            case _ =>
-              val (item, rem) = parseItem(rem0, Some(sep))
-              (sep, item) #:: helper(rem)
-          }
-        }
-      }
-
-      val (first, rem) = parseItem(str.toStream, scala.None)
-      (first, helper(rem))
     }
   }
 
@@ -329,8 +329,14 @@ object Version {
   def isBuildMetadata(item: Item) = item match { case _: BuildMetadata => true; case _ => false }
 
   def items(repr: String): Vector[Item] = {
-    val (first, tokens) = Tokenizer(repr)
-    first +: tokens.toVector.map(_._2)
+    val b = Vector.newBuilder[Item]
+    var token = Tokenizer.firstToken(repr)
+    b += token.item
+    while (token.end < repr.length) {
+      token = Tokenizer.nextToken(repr, token.end)
+      b += token.item
+    }
+    b.result()
   }
 
   private val emptyTag = Tag("")
