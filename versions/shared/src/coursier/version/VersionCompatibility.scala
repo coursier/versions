@@ -52,17 +52,40 @@ object VersionCompatibility {
   }
 
   /**
+    * The items of the `length` first segments of `version` that matter when comparing it.
+    *
+    * Build metadata and the tags that stand for the absence of a qualifier end the significant
+    * part early, like the end of the version does: `1.Final`, `1+foo` and `1` all have the same
+    * significant part, whatever `length` is.
+    */
+  private def significantItems(version: Version, length: Int): Vector[Version.Item] = {
+    val items = version.items.take(length)
+    items.take(1) ++ items.drop(1).takeWhile {
+      case _: Version.BuildMetadata => false
+      case t: Version.Tag => !t.isReleaseEquivalent
+      case _ => true
+    }
+  }
+
+  /**
+    * Whether the significant parts of two versions are the same, up to padding (a missing numeric
+    * item counts as 0) and to the representation of their items.
+    */
+  private def sameSignificantPart(first: Version, second: Version, length: Int): Boolean =
+    Version.listCompare(significantItems(first, length), significantItems(second, length)) == 0
+
+  /**
     * Whether `version` can take part in a semantic versioning compatibility check as a constraint.
     *
     * Its significant part (the major number, or major and minor for 0.x versions) must be numeric,
-    * the rest must be made of numbers, qualifiers and build metadata, and it must not be a
-    * pre-release - per semantic versioning, a constraint like `1.2.3-RC1` only accepts itself.
+    * and can be shorter than `significantPartLength` (`0` stands for `0.0`). The rest must be made
+    * of numbers, qualifiers and build metadata, and it must not be a pre-release - per semantic
+    * versioning, a constraint like `1.2.3-RC1` only accepts itself.
     */
   private def isSemVerComparable(version: Version, significantPartLength: Int): Boolean = {
-    val items = version.items
-    items.lengthCompare(significantPartLength) >= 0 &&
-    items.take(significantPartLength).forall(_.isNumber) &&
-    items.drop(significantPartLength).forall {
+    val significant = significantItems(version, significantPartLength)
+    significant.forall(_.isNumber) &&
+    version.items.drop(significant.length).forall {
       case _: Version.Numeric => true
       case _: Version.BuildMetadata => true
       case _: Version.Tag => true
@@ -132,10 +155,8 @@ object VersionCompatibility {
           c.preferred.exists { wanted =>
             val toCompare = significativePartLength(v)
             isSemVerComparable(wanted, toCompare) &&
-            wanted.items.take(toCompare) == v.items.take(toCompare) && {
-              import Ordering.Implicits._
-              wanted.items.drop(toCompare) <= v.items.drop(toCompare)
-            }
+            sameSignificantPart(wanted, v, toCompare) &&
+            wanted.compareSemantic(v) <= 0
           }
         else
           c.interval.contains(v)
@@ -165,11 +186,9 @@ object VersionCompatibility {
         if (c.interval == VersionInterval.zero)
           c.preferred.exists { wanted =>
             isSemVerComparable(wanted, 1) &&
-            wanted.items.take(1) == v.items.take(1) &&
-            v.items.take(1).exists(!_.isEmpty) && {
-              import Ordering.Implicits._
-              wanted.items.drop(1) <= v.items.drop(1)
-            }
+            sameSignificantPart(wanted, v, 1) &&
+            v.items.take(1).exists(!_.isEmpty) &&
+            wanted.compareSemantic(v) <= 0
           }
         else
           c.interval.contains(v)
@@ -191,7 +210,7 @@ object VersionCompatibility {
         val c = VersionParse.versionConstraint(constraint)
         val v = Version(version)
         if (c.interval == VersionInterval.zero)
-          c.preferred.exists(_.items.take(2) == v.items.take(2))
+          c.preferred.exists(sameSignificantPart(_, v, 2))
         else
           c.interval.contains(v)
       }
