@@ -14,7 +14,7 @@ object Previous {
       if idx >= 0
       (base, lastPart) = stripped.splitAt(idx + 1)
       if lastPart.nonEmpty && lastPart.forall(_.isDigit)
-      num = lastPart.toInt
+      num = BigInt(lastPart)
       if num > 0
     } yield s"$base${num - 1}"
   }

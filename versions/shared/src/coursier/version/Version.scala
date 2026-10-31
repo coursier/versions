@@ -68,10 +68,24 @@ case class Version(repr: String) extends Ordered[Version] {
 
   lazy val isStable: Boolean =
     !repr.endsWith("SNAPSHOT") &&
-    !repr.exists(_.isLetter) &&
+    (!repr.exists(_.isLetter) || lettersAreReleaseQualifiers) &&
     repr
       .split(Array('.', '-'))
       .forall(_.lengthCompare(5) <= 0)
+
+  // Whether the letters of this version all come from the release qualifiers following its
+  // leading number, like the Final of 3.10.1.Final.
+  private def lettersAreReleaseQualifiers: Boolean =
+    // checked on repr, as the tokenizer adds a leading 0 item to versions like .Final
+    repr.headOption.exists(_.isDigit) &&
+    // qualifiers are ASCII, and the Scala.js tokenizer doesn't terminate on other letters
+    repr.forall(c => !c.isLetter || c < 128) &&
+    items.forall {
+      case _: Version.Numeric => true
+      case t: Version.Tag => t.isQualifier && t.level > Version.Tag.emptyLevel
+      case m: Version.BuildMetadata => !m.value.exists(_.isLetter)
+      case _ => false
+    }
 
   override lazy val hashCode = repr.hashCode()
 }
