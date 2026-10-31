@@ -7,4 +7,8 @@ object Compatibility {
     def letterOrDigit = c.isLetterOrDigit
   }
 
+  // not specifying a Locale (doesn't link without a java.util.Locale implementation),
+  // toLowerCase isn't locale dependent there
+  def toLowerCase(s: String): String = s.toLowerCase()
+
 }
