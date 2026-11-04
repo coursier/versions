@@ -380,6 +380,51 @@ object VersionTests extends TestSuite {
       assert(compare("1.xyz", "1.1" ) < 0)
     }
 
+    test("releaseQualifiersMidVersion") {
+      // ga and final are equivalent to the empty item wherever they sit, not only at the end
+      // of a version, so that comparisons stay transitive. They still end the numeric prefix
+      // versions are padded to, like other qualifiers.
+      assert(compare("1.rc.0.ga", "1.rc" ) == 0)
+      assert(compare("1.rc.ga1", "1.rc.0.ga" ) > 0)
+      assert(compare("1.rc.ga1", "1.rc" ) > 0)
+      assert(compare("1.rc.ga1", "1.rc.0.1" ) == 0)
+      assert(compare("1-a.0", "1a" ) == 0)
+      assert(compare("1a", "1a-ga0" ) == 0)
+      assert(compare("1-a.0", "1a-ga0" ) == 0)
+      assert(compare("1.rc-0", "1.0rc" ) == 0)
+      assert(compare("1.0rc", "1.rc.final" ) == 0)
+      assert(compare("1.rc-0", "1.rc.final" ) == 0)
+      assert(compare("1.final.", "1-0" ) == 0)
+      assert(compare("1-0", "1final.final" ) == 0)
+      assert(compare("1.final.", "1final.final" ) == 0)
+      assert(compare("1final.final", "1-.final.0" ) == 0)
+      assert(compare("1-rc-ga-1", "1-rc-0-1" ) == 0)
+      assert(compare("1-rc-ga-1", "1-rc-1" ) < 0)
+      assert(compare("1ga2-0", "1.final.1" ) > 0)
+      // 1-ga-pre is padded to 1-0-ga-pre against 1-0-pre
+      assert(compare("1-ga-pre", "1-0-pre" ) > 0)
+      assert(compare("1-ga-pre", "1" ) < 0)
+    }
+
+    test("compareRefinesCompareSemantic") {
+      // compare only departs from compareSemantic for versions it considers equivalent
+      def check(first: String, second: String): Unit = {
+        val semantic = math.signum(compare(first, second))
+        assert(math.signum(compareTotal(first, second)) * semantic >= 0)
+        assert(math.signum(compareTotal(second, first)) * semantic <= 0)
+        assert(compareTotal(first, second) != 0)
+      }
+      check("1-ga-pre", "1")
+      check("1final.final", "1-.final.0")
+      check("1ga2-0", "1.final.1")
+      check("1-ga-1", "1-0-1")
+      check("1.ga.1", "1.0.1")
+
+      assert(compareTotal("1-ga-pre", "1") < 0)
+      assert(compareTotal("1ga2-0", "1.final.1") > 0)
+      assert(compareTotal("1-ga-1", "1-0-1") < 0)
+    }
+
 
 
     test("minimumSegment") {
@@ -597,6 +642,16 @@ object VersionTests extends TestSuite {
       assert(!Version("1.2.3+Final").isStable)
       assert(!Version("1.2.3+foo").isStable)
       assert(!Version("1.2.3.\u00e9").isStable)
+      // no other letter stands for a release qualifier
+      val nonAsciiLetters = (128 until 0x10000).map(_.toChar).filter(_.isLetter)
+      for {
+        qualifier <- Seq("Final", "GA", "SP")
+        idx <- qualifier.indices
+        c <- nonAsciiLetters
+      } {
+        val repr = "1.2.3." + qualifier.updated(idx, c)
+        assert(!Version(repr).isStable)
+      }
 
       // no leading number
       assert(!Version("Final").isStable)

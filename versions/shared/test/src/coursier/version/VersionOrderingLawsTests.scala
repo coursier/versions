@@ -57,27 +57,11 @@ object VersionOrderingLawsTests extends TestSuite {
     if (rnd.nextInt(8) == 0) Version(prefix)
     else Version(prefix + pick(rnd, separators) + genRepr(rnd, 3))
 
-  // compareSemantic currently breaks its laws as soon as a ga or final tag isn't the very last
-  // item of a version, right after its numeric ones. x-ga and x.0 both are equivalent to x, but
-  // not to each other, and 1-ga-pre goes before 1 for compareSemantic and after it for compare.
-  // Hence the laws that rely on compareSemantic only look at versions having their ga or final
-  // tag there, like 1.0.Final.
-  private def hasTrailingReleaseTagOnly(version: Version): Boolean = {
-    val items = version.items.filterNot(Version.isBuildMetadata)
-    items.indices.forall { idx =>
-      items(idx) match {
-        case tag: Version.Tag if tag.isReleaseEquivalent =>
-          idx == items.length - 1 && items.init.forall(!_.isInstanceOf[Version.Tag])
-        case _ => true
-      }
-    }
-  }
-
   // The representation of an interval doesn't tell apart a missing bound from an empty version,
   // although constraints are de-duplicated based on it, and merge can drop a constraint because
   // of that. Hence the exclusion of empty versions from the bounds merge is checked with.
   private def isMergeableBound(version: Version): Boolean =
-    version.repr.nonEmpty && hasTrailingReleaseTagOnly(version)
+    version.repr.nonEmpty
 
   private def pool(rnd: Random): Vector[Version] =
     Vector.fill(poolSize)(genVersion(rnd)).distinct
@@ -94,12 +78,6 @@ object VersionOrderingLawsTests extends TestSuite {
     }
 
   // Each violation names the offending versions. Stops at the first few of them.
-  private def semanticPairs(rnd: Random): Iterator[(Version, Version)] =
-    pairs(rnd).filter(t => hasTrailingReleaseTagOnly(t._1) && hasTrailingReleaseTagOnly(t._2))
-
-  private def semanticTriples(rnd: Random): Iterator[(Version, Version, Version)] =
-    triples(rnd).filter(t => Seq(t._1, t._2, t._3).forall(hasTrailingReleaseTagOnly))
-
   private def checkLaw[T](cases: Iterator[T])(violation: T => Option[String]): Unit = {
     val violations = cases.flatMap(c => violation(c).iterator).take(20).toVector
     assert(violations.isEmpty)
@@ -176,7 +154,7 @@ object VersionOrderingLawsTests extends TestSuite {
         }
       }
       test("transitivity") {
-        checkLaw(semanticTriples(new Random(seed))) {
+        checkLaw(triples(new Random(seed))) {
           case (a, b, c) =>
             transitivityViolation(a, b, c, "compareSemantic")(_.compareSemantic(_))
         }
@@ -190,10 +168,10 @@ object VersionOrderingLawsTests extends TestSuite {
         else Some(s"${show(a, b)}: compare gives $total, compareSemantic gives $semantic")
       }
       test("unrelated") {
-        checkLaw(semanticPairs(new Random(seed))) { case (a, b) => violation(a, b) }
+        checkLaw(pairs(new Random(seed))) { case (a, b) => violation(a, b) }
       }
       test("related") {
-        checkLaw(semanticTriples(new Random(seed))) { case (a, b, _) => violation(a, b) }
+        checkLaw(triples(new Random(seed))) { case (a, b, _) => violation(a, b) }
       }
     }
 

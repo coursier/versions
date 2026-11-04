@@ -26,16 +26,25 @@ case class Version(repr: String) extends Ordered[Version] {
    * `1.2+bar` and `1.2+foo`, …) are ordered by their representation, so that
    * sorted collections and hash-based ones agree on which versions are distinct.
    *
-   * Use [[compareSemantic]] to compare versions up to that equivalence.
+   * Use [[compareSemantic]] to compare versions up to that equivalence. This order
+   * refines it: whenever `compareSemantic` isn't `0`, `compare` has the same sign.
    */
   def compare(other: Version): Int = {
     if (repr == other.repr) 0 // fast path
     else {
-      val cmp = Version.listCompare(items, other.items)
-      // Break ties so that the order is total: versions that only differ by
-      // padding, separators, or build metadata are ordered by representation.
-      if (cmp == 0) repr.compareTo(other.repr)
-      else cmp
+      val semanticCmp = compareSemantic(other)
+      if (semanticCmp != 0) semanticCmp
+      else {
+        // Break ties so that the order is total: versions that differ by release qualifiers
+        // (ga and final, which compareSemantic ignores), then by padding, separators, or
+        // build metadata, are ordered by their items, then by representation.
+        // Items and semantic items only differ for versions having ga or final tags.
+        val cmp =
+          if ((semanticItems eq items) && (other.semanticItems eq other.items)) 0
+          else Version.listCompare(items, other.items)
+        if (cmp == 0) repr.compareTo(other.repr)
+        else cmp
+      }
     }
   }
 
@@ -78,8 +87,6 @@ case class Version(repr: String) extends Ordered[Version] {
   private def lettersAreReleaseQualifiers: Boolean =
     // checked on repr, as the tokenizer adds a leading 0 item to versions like .Final
     repr.headOption.exists(_.isDigit) &&
-    // qualifiers are ASCII, and the Scala.js tokenizer doesn't terminate on other letters
-    repr.forall(c => !c.isLetter || c < 128) &&
     items.forall {
       case _: Version.Numeric => true
       case t: Version.Tag => t.isQualifier && t.level > Version.Tag.emptyLevel
@@ -104,6 +111,12 @@ object Version {
         case (a: Number, b: BigNumber) => -b.value.compare(a.value)
         case (a: BigNumber, b: Number) => a.value.compare(b.value)
         case (a: Tag, b: Tag) => a.compareTag(b)
+        // The empty tag, which ga and final become in semantic items, is equivalent to the
+        // empty item wherever it sits, like it is at the end of a version. Otherwise, it would
+        // go before a zero in the middle of a version, and comparisons wouldn't be transitive:
+        // 1.final. <= 1-0 <= 1final.final, but 1.final. > 1final.final.
+        case (a: Tag, b: Numeric) if a.level == Tag.emptyLevel => -b.compareToEmpty
+        case (a: Numeric, b: Tag) if b.level == Tag.emptyLevel => a.compareToEmpty
         case _ =>
           val rel0 = compareToEmpty
           val rel1 = other.compareToEmpty
@@ -181,7 +194,7 @@ object Version {
      * `3.10.1.Final` or the `GA` of `1.2.3.GA`.
      *
      * [[Version.compare]] orders those after the empty item, so that no two versions compare
-     * equal, while [[Version.compareSemantic]] treats them as the empty tag.
+     * equal, while [[Version.compareSemantic]] treats them as the empty item.
      */
     def isReleaseEquivalent: Boolean =
       level == Tag.emptyLevel || level == Tag.gaLevel || level == Tag.finalLevel
@@ -360,7 +373,12 @@ object Version {
    * empty tag, so that `1.1.0`, `1.1.0.GA` and `1.1.0.Final` compare equal.
    *
    * Those tags are ordered right after the empty item, and nothing else sits between them, so
-   * that collapsing them keeps the order of everything else unchanged.
+   * that collapsing them keeps the order of everything else unchanged. The empty tag compares
+   * equal to the empty item wherever it sits (see [[Item.compare]]), but it isn't numeric, so
+   * that it still ends the numeric prefix versions are padded to: `1-ga-1` is padded to
+   * `1-0-0-ga-1` against `1-0-1`, and goes before it.
+   *
+   * Returns `items` itself when none of them is such a tag.
    */
   private def semanticItems(items: Vector[Item]): Vector[Item] = {
     def isReleaseEquivalent(item: Item): Boolean =
