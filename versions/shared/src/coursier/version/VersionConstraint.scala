@@ -35,13 +35,15 @@ sealed abstract class VersionConstraint extends Product with Serializable with O
 object VersionConstraint {
   def apply(version: String): VersionConstraint =
     Lazy(version)
-  def from(interval: VersionInterval, preferred: Option[Version], latest: Option[Latest]): VersionConstraint =
+  def from(interval: VersionInterval, preferred: Option[Version], latest: Option[Latest]): VersionConstraint = {
+    val interval0 = interval.normalized
     Eager(
-      generateString(interval, preferred, latest),
-      interval,
+      generateString(interval0, preferred, latest),
+      interval0,
       preferred,
       latest
     )
+  }
 
   def empty: VersionConstraint =
     empty0
@@ -68,12 +70,17 @@ object VersionConstraint {
       )
 
   def merge(constraints0: VersionConstraint*): Option[VersionConstraint] = {
-    // Initial pass to filter exact duplicates
-    val constraints = constraints0.distinct
+    // Initial pass to filter exact duplicates. Constraints are compared on their string
+    // representation only, which some different ones built in code can share, so their content
+    // is compared too.
+    val constraints = constraints0
+      .map(c => (c, c.interval, c.preferred, c.latest))
+      .distinct
+      .map(_._1)
     if (constraints.isEmpty) Some(empty)
     else if (constraints.lengthCompare(1) == 0) Some(constraints.head).filter(_.isValid)
     else {
-      val intervals = constraints.map(_.interval)
+      val intervals = constraints.map(_.interval.normalized)
 
       val intervalOpt =
         intervals.foldLeft(Option(VersionInterval.zero)) {

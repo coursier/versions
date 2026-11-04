@@ -57,12 +57,6 @@ object VersionOrderingLawsTests extends TestSuite {
     if (rnd.nextInt(8) == 0) Version(prefix)
     else Version(prefix + pick(rnd, separators) + genRepr(rnd, 3))
 
-  // The representation of an interval doesn't tell apart a missing bound from an empty version,
-  // although constraints are de-duplicated based on it, and merge can drop a constraint because
-  // of that. Hence the exclusion of empty versions from the bounds merge is checked with.
-  private def isMergeableBound(version: Version): Boolean =
-    version.repr.nonEmpty
-
   private def pool(rnd: Random): Vector[Version] =
     Vector.fill(poolSize)(genVersion(rnd)).distinct
 
@@ -226,15 +220,29 @@ object VersionOrderingLawsTests extends TestSuite {
 
     test("merge") {
       val rnd = new Random(seed)
+      // Empty-version bounds are made more frequent, and some intervals get a twin with their
+      // empty-version bounds missing instead, that renders the same way
+      def emptied(bound: Option[Version]) =
+        if (rnd.nextInt(4) == 0) Some(Version.zero) else bound
+      def dropEmpty(bound: Option[Version]) =
+        bound.filter(_.repr.nonEmpty)
       val cases = Iterator.fill(mergeCount) {
-        Vector.fill(2 + rnd.nextInt(3))(genInterval(rnd)).map { itv =>
-          val from = itv.from.filter(isMergeableBound)
-          val to = itv.to.filter(isMergeableBound)
-          val bounded =
-            itv.withFrom(from).withTo(to)
-              .withFromIncluded(itv.fromIncluded && from.nonEmpty)
-              .withToIncluded(itv.toIncluded && to.nonEmpty)
-          VersionConstraint.from(bounded, None, None)
+        val intervals = Vector.fill(2 + rnd.nextInt(3))(genInterval(rnd)).map { itv =>
+          val from = emptied(itv.from)
+          val to = emptied(itv.to)
+          itv.withFrom(from).withTo(to)
+            .withFromIncluded(itv.fromIncluded && from.nonEmpty)
+            .withToIncluded(itv.toIncluded && to.nonEmpty)
+        }
+        val twins = intervals.filter(_ => rnd.nextBoolean()).map { itv =>
+          val from = dropEmpty(itv.from)
+          val to = dropEmpty(itv.to)
+          itv.withFrom(from).withTo(to)
+            .withFromIncluded(itv.fromIncluded && from.nonEmpty)
+            .withToIncluded(itv.toIncluded && to.nonEmpty)
+        }
+        (intervals ++ twins).map { itv =>
+          VersionConstraint.Eager(itv.repr, itv, None, None): VersionConstraint
         }
       }
       checkLaw(cases) { constraints =>

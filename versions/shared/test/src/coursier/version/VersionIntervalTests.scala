@@ -333,6 +333,22 @@ object VersionIntervalTests extends TestSuite {
         val c1 = VersionParse.versionInterval(s1).map(_.constraint)
         assert(c1 == Some(VersionConstraint.fromInterval(s1, VersionInterval(VersionParse.version("1.3"), VersionParse.version("2.4"), true, false))))
       }
+      test("emptyVersionLowerBound") {
+        val c0 = VersionInterval(Some(Version("")), Some(Version("1.0")), true, true).constraint
+        val c1 = VersionInterval(None, Some(Version("1.0")), false, true).constraint
+        assert(c0 == c1)
+        assert(c0.asString == "(,1.0]")
+        assert(c0.interval == VersionInterval(None, Some(Version("1.0")), false, true))
+      }
+      test("emptyVersionLowerBoundOnly") {
+        assert(VersionInterval(Some(Version("")), None, true, false).constraint == VersionConstraint.empty)
+        assert(VersionInterval(Some(Version("")), None, false, false).constraint == VersionConstraint.empty)
+      }
+      test("empty") {
+        val c0 = VersionInterval.empty.constraint
+        assert(c0.asString == "(,)")
+        assert(c0.interval == VersionInterval.empty)
+      }
     }
   }
 

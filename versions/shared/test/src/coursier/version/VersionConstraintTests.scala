@@ -140,6 +140,54 @@ object VersionConstraintTests extends TestSuite {
         pprint.err.log(c0)
         assert(c0.isEmpty)
       }
+
+      test("emptyVersionLowerBound") {
+        // both render as (,1.0], but parsing that gives the latter
+        val withEmpty = VersionConstraint.from(VersionInterval(Some(Version("")), Some(Version("1.0")), false, true), None, None)
+        val withNone = VersionConstraint.from(VersionInterval(None, Some(Version("1.0")), false, true), None, None)
+        val expected = Some(VersionInterval(None, Some(Version("1.0")), false, true))
+        assert(VersionConstraint.merge(withEmpty, withNone).map(_.interval) == expected)
+        assert(VersionConstraint.merge(withNone, withEmpty).map(_.interval) == expected)
+      }
+
+      test("sameStringDifferentInterval") {
+        // built by hand, these don't go through the normalization of from, and only share
+        // their string representation
+        val below = Version("alpha")
+        assert(below.compareSemantic(Version.zero) < 0)
+        val bounded = VersionConstraint.Eager("(alpha,)", VersionInterval(Some(below), Some(Version.zero), false, false), None, None)
+        val unbounded = VersionConstraint.from(VersionInterval(Some(below), None, false, false), None, None)
+        assert(bounded == unbounded)
+        val expected = Some(VersionInterval(Some(below), Some(Version.zero), false, false))
+        assert(VersionConstraint.merge(bounded, unbounded).map(_.interval) == expected)
+        assert(VersionConstraint.merge(unbounded, bounded).map(_.interval) == expected)
+      }
+    }
+
+    test("from") {
+      test("emptyVersionLowerBound") {
+        val c0 = VersionConstraint.from(VersionInterval(Some(Version("")), Some(Version("1.0")), true, true), None, None)
+        val c1 = VersionConstraint.from(VersionInterval(None, Some(Version("1.0")), false, true), None, None)
+        assert(c0.asString == "(,1.0]")
+        assert(c0 == c1)
+        assert(c0.interval == c1.interval)
+        assert(c0.interval == VersionParse.versionConstraint(c0.asString).interval)
+      }
+      test("emptyVersionLowerBoundWithPreferred") {
+        val c0 = VersionConstraint.from(VersionInterval(Some(Version("")), Some(Version("2.0")), false, false), Some(Version("1.0")), None)
+        assert(c0.asString == "(,2.0)&1.0")
+        assert(c0.interval == VersionInterval(None, Some(Version("2.0")), false, false))
+      }
+      test("emptyVersionBounds") {
+        val c0 = VersionConstraint.from(VersionInterval(Some(Version("")), Some(Version("")), false, false), None, None)
+        assert(c0 == VersionConstraint.empty)
+        assert(c0.interval == VersionInterval.empty)
+      }
+      test("empty") {
+        val c0 = VersionConstraint.from(VersionInterval.empty, None, None)
+        assert(c0 == VersionConstraint.empty)
+        assert(c0.interval == VersionInterval.empty)
+      }
     }
 
     test("relaxedMerge") {

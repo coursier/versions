@@ -86,15 +86,27 @@ case class VersionInterval(
       .filter(_.isValid)
   }
 
+  /**
+    * This interval, with an empty-version lower bound made a missing one
+    *
+    * Both render the same way, and parsing gives a missing bound for either, so that the
+    * constraints built from intervals can be told apart by their representation. The upper bound
+    * is left as is, as an empty version there excludes about every version, unlike a missing one
+    * (see [[VersionInterval.empty]]).
+    */
+  private[version] def normalized: VersionInterval =
+    if (from.exists(_.repr.isEmpty)) copy(from = None, fromIncluded = false)
+    else this
+
   def constraint: VersionConstraint =
-    this match {
+    normalized match {
       case VersionInterval.zero => VersionConstraint.empty
       case itv =>
         (itv.from, itv.to, itv.fromIncluded, itv.toIncluded) match {
           case (Some(version), None, true, false) =>
             VersionConstraint.fromPreferred(version.repr, version)
           case _ =>
-            VersionConstraint.fromInterval(repr, itv)
+            VersionConstraint.fromInterval(itv.repr, itv)
         }
     }
 
