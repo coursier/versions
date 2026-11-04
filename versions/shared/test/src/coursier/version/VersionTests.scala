@@ -564,6 +564,57 @@ object VersionTests extends TestSuite {
       assert(!Version("1.2.3-g12eafd3").isStable)
       assert(!Version("1.2.3-M2").isStable)
       assert(!Version("1.2.3-RC1").isStable)
+      assert(!Version("9.4.25.v20191220").isStable)
+
+      // release qualifiers, in any case
+      assert(Version("3.10.1.Final").isStable)
+      assert(Version("3.10.1.FINAL").isStable)
+      assert(Version("3.10.1-final").isStable)
+      assert(Version("1.2.3.GA").isStable)
+      assert(Version("1.2.3-ga").isStable)
+      assert(Version("1.2.3.SP").isStable)
+      assert(Version("1.2.3.SP1").isStable)
+      assert(Version("1.2.3.sp1").isStable)
+      assert(Version("1.2.3.SP+4").isStable)
+
+      // release qualifiers along with anything else
+      assert(!Version("1.2.3.Final-SNAPSHOT").isStable)
+      assert(!Version("1.2.3.final-snapshot").isStable)
+      assert(!Version("1.2.3.SP1-RC1").isStable)
+      assert(!Version("1.2.3.Final-foo").isStable)
+      assert(!Version("1.2.3.Final.x").isStable)
+      assert(!Version("1.2.3.Final.max").isStable)
+      assert(!Version("1.2.3.GA+a").isStable)
+      assert(!Version("1.2.3.GA-!").isStable)
+      assert(!Version("1.2.3.GA\u00e9").isStable)
+
+      // other letters
+      assert(!Version("1.2.3.Finale").isStable)
+      assert(!Version("1.2.3.a1").isStable)
+      assert(!Version("1.2.3.max").isStable)
+      assert(!Version("1.2.min").isStable)
+      assert(!Version("1.2.x").isStable)
+      assert(!Version("1.2.3+Final").isStable)
+      assert(!Version("1.2.3+foo").isStable)
+      assert(!Version("1.2.3.\u00e9").isStable)
+
+      // no leading number
+      assert(!Version("Final").isStable)
+      assert(!Version("final.1").isStable)
+      assert(!Version(".Final").isStable)
+      assert(!Version("-Final").isStable)
+
+      // segments longer than 5 chars
+      assert(!Version("1.2.3Final").isStable)
+      assert(!Version("1.2.3.Final1").isStable)
+      assert(!Version("1.2.3.Final+4").isStable)
+      assert(!Version("1.2.3.123456").isStable)
+
+      // no letters
+      assert(Version("").isStable)
+      assert(Version("1.2.3+4").isStable)
+      assert(Version("1.2.*").isStable)
+      assert(Version("1.2.3-!").isStable)
     }
 
     // All the examples from
