@@ -7,6 +7,8 @@ object Compatibility {
     def letterOrDigit = c.isLetterOrDigit
   }
 
+  def toLowerCase(s: String): String = s.toLowerCase(java.util.Locale.ROOT)
+
   // unused, kept for binary compatibility
   def regexLookbehind: String = "<="
 
