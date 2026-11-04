@@ -75,11 +75,12 @@ case class Version(repr: String) extends Ordered[Version] {
   def withRepr(repr: String): Version =
     copy(repr = repr)
 
+  // SNAPSHOT versions, in any case, are unstable as snapshot isn't a release qualifier.
   lazy val isStable: Boolean =
-    !repr.endsWith("SNAPSHOT") &&
     (!repr.exists(_.isLetter) || lettersAreReleaseQualifiers) &&
     repr
-      .split(Array('.', '-'))
+      // the separators of the tokenizer
+      .split(Array('.', '-', '_', '+'))
       .forall(_.lengthCompare(5) <= 0)
 
   // Whether the letters of this version all come from the release qualifiers following its

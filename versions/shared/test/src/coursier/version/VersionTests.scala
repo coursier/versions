@@ -606,6 +606,11 @@ object VersionTests extends TestSuite {
       assert(Version("1.2.3").isStable)
       assert(Version("1.2.3-3").isStable)
       assert(!Version("1.2.3-SNAPSHOT").isStable)
+      assert(!Version("1.2.3-snapshot").isStable)
+      assert(!Version("1.2.3-Snapshot").isStable)
+      assert(!Version("1.2.3.SNAPSHOT").isStable)
+      assert(!Version("1.2.3-SNAPSHOT+4").isStable)
+      assert(!Version("1.2.3-SNAPSHOT.1").isStable)
       assert(!Version("1.2.3-g12eafd3").isStable)
       assert(!Version("1.2.3-M2").isStable)
       assert(!Version("1.2.3-RC1").isStable)
@@ -621,6 +626,9 @@ object VersionTests extends TestSuite {
       assert(Version("1.2.3.SP1").isStable)
       assert(Version("1.2.3.sp1").isStable)
       assert(Version("1.2.3.SP+4").isStable)
+      assert(Version("1.2.3.Final+4").isStable)
+      assert(Version("1.2.3_Final").isStable)
+      assert(Version("1.2.3.GA1").isStable)
 
       // release qualifiers along with anything else
       assert(!Version("1.2.3.Final-SNAPSHOT").isStable)
@@ -632,6 +640,25 @@ object VersionTests extends TestSuite {
       assert(!Version("1.2.3.GA+a").isStable)
       assert(!Version("1.2.3.GA-!").isStable)
       assert(!Version("1.2.3.GA\u00e9").isStable)
+      // lower-cased to "fi\u0307nal" on all platforms
+      assert(!Version("1.2.3.F\u0130NAL").isStable)
+
+      // pre-release qualifiers and their abbreviations
+      assert(!Version("1.2.3-alpha").isStable)
+      assert(!Version("1.2.3a1").isStable)
+      assert(!Version("1.2.3-b2").isStable)
+      assert(!Version("1.2.3-m1").isStable)
+      assert(!Version("1.2.3-CR1").isStable)
+      assert(!Version("1.2.3-dev").isStable)
+      assert(!Version("1.2.3-pre").isStable)
+      assert(!Version("1.2.3.Final-CR1").isStable)
+
+      // other qualifier spellings are plain literals
+      assert(!Version("1.2.3.RELEASE").isStable)
+      assert(!Version("1.2.3.Rel").isStable)
+      assert(!Version("1.2.3.FIN").isStable)
+      assert(!Version("1.2.3.G.A").isStable)
+      assert(!Version("1.2.3.S.P").isStable)
 
       // other letters
       assert(!Version("1.2.3.Finale").isStable)
@@ -662,8 +689,22 @@ object VersionTests extends TestSuite {
       // segments longer than 5 chars
       assert(!Version("1.2.3Final").isStable)
       assert(!Version("1.2.3.Final1").isStable)
-      assert(!Version("1.2.3.Final+4").isStable)
       assert(!Version("1.2.3.123456").isStable)
+      assert(!Version("1.2.3_123456").isStable)
+      assert(!Version("1.2.3+123456").isStable)
+      assert(!Version("1.2.3.Final+20200101").isStable)
+      assert(!Version("1.0.0+3-12345678").isStable)
+
+      // build metadata
+      assert(!Version("1.2.3+build").isStable)
+      assert(!Version("1.2.3+build.1").isStable)
+      assert(!Version("1.2.3+4-g12eafd3").isStable)
+      assert(Version("1.2.3+4.5-6").isStable)
+
+      // all the separators of the tokenizer delimit segments
+      assert(Version("1_2_3_4").isStable)
+      assert(Version("1.2.33+4567").isStable)
+      assert(Version("1.2.3_4").isStable)
 
       // no letters
       assert(Version("").isStable)
