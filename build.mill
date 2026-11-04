@@ -22,8 +22,8 @@ object DepVersions {
 
   // Scala versions we build for on the JVM
   def scala = Seq(scala213, scala212, scala3)
-  // Scala.js and Scala Native modules are only published for Scala 2.13 and Scala 3
-  def scalaPlatforms = Seq(scala213, scala3)
+  // Scala.js and Scala Native modules are only published for Scala 3
+  def scalaPlatforms = Seq(scala3)
 }
 
 object Deps {
