@@ -14,21 +14,21 @@ checked with [MiMa](https://github.com/lightbend-labs/mima) against all the rele
 
 With sbt, add to your `build.sbt`:
 ```scala
-libraryDependencies += "io.get-coursier" %% "versions" % "0.6.1"
+libraryDependencies += "io.get-coursier" %% "versions" % "0.7.0"
 // or, for Scala.js and Scala Native
-libraryDependencies += "io.get-coursier" %%% "versions" % "0.6.1"
+libraryDependencies += "io.get-coursier" %%% "versions" % "0.7.0"
 ```
 
 With Mill, add to your module:
 ```scala
-def mvnDeps = Seq(mvn"io.get-coursier::versions:0.6.1")
+def mvnDeps = Seq(mvn"io.get-coursier::versions:0.7.0")
 // or, for Scala.js and Scala Native
-def mvnDeps = Seq(mvn"io.get-coursier::versions::0.6.1")
+def mvnDeps = Seq(mvn"io.get-coursier::versions::0.7.0")
 ```
 
 With Scala CLI:
 ```scala
-//> using dep io.get-coursier::versions:0.6.1
+//> using dep io.get-coursier::versions:0.7.0
 ```
 
 *coursier-versions* is available for the following platforms:
