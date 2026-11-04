@@ -226,6 +226,295 @@ object VersionCompatibilityTests extends TestSuite {
       }
     }
 
+    test("semantically equal versions") {
+
+      test("early semver") {
+        implicit val compat = VersionCompatibility.EarlySemVer
+
+        test("padding") {
+          compatible("1.2.0", "1.2")
+          compatible("1.2", "1.2.0")
+          compatible("1.0", "1")
+          compatible("1", "1.0.0")
+          compatible("1.2", "1.3")
+          compatible("1.2.0", "1.3")
+          incompatible("1.3", "1.2.0")
+          incompatible("1.2.1", "1.2")
+        }
+        test("release qualifiers") {
+          compatible("1.2.Final", "1.2")
+          compatible("1.2", "1.2.Final")
+          compatible("1.2.GA", "1.2.0.Final")
+          compatible("1.2.0.Final", "1.2.1")
+          compatible("1.Final", "1.0")
+          incompatible("1.2.1.Final", "1.2.0")
+          incompatible("1.2.SP1", "1.2")
+        }
+        test("build metadata") {
+          compatible("1.2.0+b", "1.2.0")
+          compatible("1.2.0", "1.2.0+b")
+          compatible("1.2.0+a", "1.2.0+b")
+          compatible("1.2+a", "1.2.0")
+          incompatible("1.2.1+a", "1.2.0+b")
+        }
+        test("number representations") {
+          compatible("0000000001.2.3", "1.2.3")
+          compatible("1.2.0000000003", "1.2.3")
+          incompatible("10000000000.2.3", "10000000001.2.3")
+        }
+        test("short 0.x versions") {
+          compatible("0", "0.0")
+          compatible("0.0", "0")
+          compatible("0", "0.0.1")
+          compatible("0.0.0", "0")
+          compatible("0.Final", "0.0")
+          compatible("0+a", "0.0")
+          compatible("0.0", "0+a")
+          compatible("0.1.0", "0.1")
+          compatible("0.1.Final", "0.1.1")
+          compatible("0.1.0+a", "0.1")
+          compatible("0000000000.1", "0.1.2")
+          incompatible("0", "0.1")
+          incompatible("0.1", "0")
+          incompatible("0.0.1", "0")
+          incompatible("0.Final", "0.1")
+          incompatible("0", "1")
+          incompatible("1", "0")
+          incompatible("0.1", "0.2")
+        }
+        test("non numeric significant parts") {
+          incompatible("foo", "0")
+          incompatible("Final", "0")
+          incompatible("0", "Final")
+          incompatible("0.foo", "0.0.1")
+          incompatible("0.x", "0.0.1")
+        }
+      }
+
+      test("semver spec") {
+        implicit val compat = VersionCompatibility.SemVerSpec
+
+        test {
+          compatible("1.2.0", "1.2")
+        }
+        test {
+          compatible("1.2", "1.2.0")
+        }
+        test {
+          compatible("1.0", "1")
+        }
+        test {
+          compatible("1.Final", "1.0")
+        }
+        test {
+          compatible("1.2.Final", "1.2")
+        }
+        test {
+          compatible("1.2.0+a", "1.2.0+b")
+        }
+        test {
+          compatible("0000000001.2.3", "1.2.3")
+        }
+        test {
+          incompatible("1.2.1", "1.2")
+        }
+        test {
+          incompatible("1", "2")
+        }
+
+        test("0.x versions stay incompatible") {
+          incompatible("0.1.0", "0.1")
+          incompatible("0.1", "0.1.0")
+          incompatible("0.1.Final", "0.1")
+          incompatible("0.1+a", "0.1")
+          incompatible("0", "0.0")
+          incompatible("0.0", "0")
+          incompatible("0", "Final")
+        }
+      }
+
+      test("package versioning") {
+        implicit val compat = VersionCompatibility.PackVer
+
+        test("padding") {
+          compatible("1", "1.0")
+          compatible("1.0", "1")
+          compatible("1", "1.0.3")
+          compatible("0", "0.0.1")
+          incompatible("1", "1.1")
+          incompatible("1.1", "1")
+        }
+        test("release qualifiers") {
+          compatible("1.Final", "1.0")
+          compatible("1.0", "1.GA")
+          compatible("1.Final", "1.GA")
+          compatible("1.Final", "1.0.3")
+          incompatible("1.Final", "1.1")
+        }
+        test("build metadata") {
+          compatible("1+a", "1.0")
+          compatible("1.0", "1+a")
+          compatible("1+a", "1+b")
+          incompatible("1+a", "1.1")
+        }
+        test("number representations") {
+          compatible("0000000001.2.3", "1.2.4")
+          compatible("1.0000000002", "1.2.4")
+        }
+        test("no order nor pre-release check") {
+          compatible("1.0.5", "1.0.1")
+          compatible("1.2-RC1", "1.2")
+          compatible("1.2", "1.2-RC1")
+        }
+        test("literal and qualifiers") {
+          compatible("1-RC1", "1-RC2")
+          compatible("1.foo.1", "1.foo.2")
+          compatible("foo.bar.1", "foo.bar.2")
+          incompatible("1-RC1", "1.0")
+          incompatible("1", "1-RC1")
+          incompatible("1.foo", "1.0")
+          incompatible("Final", "GA")
+          incompatible("Final", "0")
+        }
+      }
+
+      test("default") {
+        implicit val compat = VersionCompatibility.Default
+        compatible("1", "1.0")
+        compatible("1.Final", "1.0")
+      }
+
+      test("pre-releases") {
+        val compatibilities = Seq(VersionCompatibility.EarlySemVer, VersionCompatibility.SemVerSpec)
+
+        def compatible(wanted: String, selected: String): Unit =
+          for (compat <- compatibilities) {
+            val compatible = compat.isCompatible(wanted, selected)
+            Predef.assert(compatible, s"Expected '$selected' to be compatible with '$wanted' per $compat")
+          }
+        def incompatible(wanted: String, selected: String): Unit =
+          for (compat <- compatibilities) {
+            val compatible = compat.isCompatible(wanted, selected)
+            Predef.assert(!compatible, s"Expected '$selected' not to be compatible with '$wanted' per $compat")
+          }
+
+        test("constraints only accept themselves") {
+          compatible("1.2.3-RC1", "1.2.3-RC1")
+          incompatible("1.2.3-RC1", "1.2.3")
+          incompatible("1.2-RC1", "1.2")
+          incompatible("1-RC1", "1")
+          incompatible("1-RC1", "1.0")
+          incompatible("1.2.3-RC1", "1.2.3-RC1+b")
+          incompatible("1.2-RC1", "1.2.0-RC1")
+        }
+        test("come before their release") {
+          // pre-releases of a later version are accepted, but not those of the wanted one
+          compatible("1.2.3", "1.2.4-RC1")
+          compatible("1.2", "1.2.1-RC1")
+          incompatible("1.2.3", "1.2.3-RC1")
+          incompatible("1.2", "1.2-RC1")
+          incompatible("1.2", "1.2.0-RC1")
+          incompatible("1.2.3", "1.2.3-SNAPSHOT")
+          incompatible("1", "1-RC1")
+        }
+      }
+
+      test("minimum compatible version") {
+        val versions = Seq(
+          "0", "0.0", "0.0.0", "0.0.1", "0.1", "0.1.0", "0.1.2", "0.Final", "0.0.Final", "0+a",
+          "0.1.0+a", "0.1.0-RC1", "0-RC1",
+          "1", "1.0", "1.0.0", "1.2", "1.2.0", "1.2.3", "1.Final", "1.GA", "1.2.Final", "1.2.GA",
+          "1+a", "1.2+a", "1.2.0+b", "1.2.3-RC1", "1.2-RC1", "1-RC1", "0000000001.2.3",
+          "foo", "1.foo"
+        )
+        val compatibilities = Seq(
+          VersionCompatibility.EarlySemVer,
+          VersionCompatibility.SemVerSpec,
+          VersionCompatibility.PackVer
+        )
+
+        test("minimums") {
+          {
+            implicit val compat = VersionCompatibility.EarlySemVer
+            minimumCompatible("0", "0")
+            minimumCompatible("1", "1")
+            minimumCompatible("1.2.0", "1")
+            minimumCompatible("1.2.Final", "1")
+            minimumCompatible("1.2.0+b", "1")
+            minimumCompatible("1.2.0-RC1", "1")
+            minimumCompatible("1-RC1", "1-RC1")
+          }
+          {
+            implicit val compat = VersionCompatibility.SemVerSpec
+            minimumCompatible("1.2.0", "1")
+            minimumCompatible("1.2", "1")
+            minimumCompatible("0", "0")
+          }
+          {
+            implicit val compat = VersionCompatibility.PackVer
+            minimumCompatible("1", "1")
+            minimumCompatible("1.0", "1.0")
+            minimumCompatible("1.0-RC1", "1.0-RC1")
+          }
+        }
+
+        test("accepts the version") {
+          for (compat <- compatibilities; version <- versions) {
+            val minimum = compat.minimumCompatibleVersion(version)
+            Predef.assert(
+              compat.isCompatible(minimum, version),
+              s"Expected '$version' to be compatible with its minimum '$minimum' per $compat"
+            )
+          }
+        }
+
+        test("accepts what the version accepts") {
+          for {
+            compat <- compatibilities
+            wanted <- versions
+            selected <- versions
+            if compat.isCompatible(wanted, selected)
+          } {
+            val minimum = compat.minimumCompatibleVersion(wanted)
+            Predef.assert(
+              compat.isCompatible(minimum, selected),
+              s"Expected '$selected' to be compatible with '$minimum', the minimum of '$wanted', per $compat"
+            )
+          }
+        }
+
+        test("agree on versions compatible both ways") {
+          for {
+            compat <- compatibilities
+            first <- versions
+            second <- versions
+            if compat.isCompatible(first, second) && compat.isCompatible(second, first)
+          } {
+            val firstMinimum = compat.minimumCompatibleVersion(first)
+            val secondMinimum = compat.minimumCompatibleVersion(second)
+            Predef.assert(
+              compat.isCompatible(firstMinimum, secondMinimum),
+              s"Expected minimums '$firstMinimum' and '$secondMinimum' of '$first' and '$second' to be compatible per $compat"
+            )
+          }
+        }
+      }
+    }
+
+    test("interval constraints") {
+      val compatibilities = Seq(
+        VersionCompatibility.EarlySemVer,
+        VersionCompatibility.SemVerSpec,
+        VersionCompatibility.PackVer
+      )
+      for (compat <- compatibilities) {
+        Predef.assert(compat.isCompatible("[1.0,2.0)", "1.5"))
+        Predef.assert(compat.isCompatible("[1.0,2.0)", "1"))
+        Predef.assert(!compat.isCompatible("[1.0,2.0)", "2.0"))
+        Predef.assert(compat.isCompatible("[0.1,0.3)", "0.2"))
+      }
+    }
+
     test("all") {
 
       val compatibilities = Seq(
