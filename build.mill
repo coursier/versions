@@ -9,7 +9,6 @@ import mill.scalajslib.*
 import mill.scalalib.*
 import mill.scalanativelib.*
 import mill.scalalib.publish.*
-import mill.util.VcsVersion
 
 import java.io.File
 
@@ -77,28 +76,40 @@ trait VersionsPublishModule extends PublishModule with VersionsMima {
     )
   )
 
-  def publishVersion = Task {
-    val state = VcsVersion.vcsState()
-    if (state.commitsSinceLastTag > 0) {
-      val versionOrEmpty = state.lastTag
-        .filter(_ != "latest")
-        .map(_.stripPrefix("v"))
-        .flatMap { tag =>
-          val idx = tag.lastIndexOf(".")
-          if (idx >= 0)
-            Some(tag.take(idx + 1) + (tag.drop(idx + 1).takeWhile(_.isDigit).toInt + 1).toString + "-SNAPSHOT")
-          else None
-        }
-        .getOrElse("0.0.1-SNAPSHOT")
-      Some(versionOrEmpty)
-        .filter(_.nonEmpty)
-        .getOrElse(state.format())
-    } else
-      state
-        .lastTag
-        .getOrElse(state.format())
-        .stripPrefix("v")
+  def publishVersion = Task.Input(VersionsPublishModule.computePublishVersion)
+}
+
+object VersionsPublishModule {
+  private def gitOutput(args: String*) =
+    os.proc("git", args)
+      .call(cwd = BuildCtx.workspaceRoot, check = false, stderr = os.Pipe)
+      .out
+      .lines()
+      .map(_.trim)
+      .filter(_.nonEmpty)
+
+  private def headTag =
+    gitOutput("tag", "--points-at", "HEAD", "--list", "v*").headOption
+
+  private def latestTag =
+    gitOutput("describe", "--tags", "--abbrev=0", "--match", "v*").headOption
+
+  // Keeps the first 3 '.'-separated parts of the tag, bumps the last one, and adds '-SNAPSHOT'
+  // (only the leading digits of the last part are kept, so that "0.5.0-M1" gives "0.5.1-SNAPSHOT")
+  private def snapshotVersion(tag: String) = {
+    val parts = tag.stripPrefix("v").split('.').take(3)
+    val last = parts.last.takeWhile(_.isDigit).toIntOption.getOrElse {
+      sys.error(s"Malformed tag $tag (${parts.last} doesn't start with a number)")
+    }
+    (parts.init :+ (last + 1).toString).mkString(".") + "-SNAPSHOT"
   }
+
+  // If HEAD has a v* tag, use it, else use a snapshot version derived from the latest v* tag
+  def computePublishVersion: String =
+    headTag
+      .map(_.stripPrefix("v"))
+      .orElse(latestTag.map(snapshotVersion))
+      .getOrElse("0.0.1-SNAPSHOT")
 }
 
 trait Versions extends Cross.Module[String] with ScalaModule with VersionsPublishModule {

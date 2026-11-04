@@ -50,6 +50,13 @@ jobs:
   release:
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
+    # Ensure no two jobs publish to Sonatype Central at the same time
+    concurrency:
+      group: sonatype-central-publish
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v7
         with:
@@ -61,7 +68,7 @@ jobs:
       - name: Publish
         run: |
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            ./mill -i mill.scalalib.SonatypeCentralPublishModule/ --bundleName "coursier-versions-${GITHUB_REF#refs/tags/v}"
+            ./mill -i mill.scalalib.SonatypeCentralPublishModule/ --bundleName "versions-${GITHUB_REF#refs/tags/v}" --shouldRelease false
           else
             for tag in $(git tag --points-at HEAD); do
               git tag -d "$tag"
@@ -73,3 +80,12 @@ jobs:
           MILL_PGP_PASSPHRASE: ${{ secrets.PUBLISH_SECRET_KEY_PASSWORD }}
           MILL_SONATYPE_USERNAME: ${{ secrets.PUBLISH_USER }}
           MILL_SONATYPE_PASSWORD: ${{ secrets.PUBLISH_PASSWORD }}
+      - name: Publish to GitHub Packages
+        continue-on-error: true
+        run: |
+          ./mill -i mill.javalib.MavenPublishModule/publishAll \
+            --releaseUri "https://maven.pkg.github.com/$GITHUB_REPOSITORY" \
+            --snapshotUri "https://maven.pkg.github.com/$GITHUB_REPOSITORY"
+        env:
+          MILL_MAVEN_USERNAME: ${{ github.actor }}
+          MILL_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
