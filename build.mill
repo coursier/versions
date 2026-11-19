@@ -17,7 +17,7 @@ object DepVersions {
   def scala212 = "2.12.21"
   def scala213 = "2.13.18"
   def scala3 = "3.3.9"
-  def scalaJs = "1.22.0"
+  def scalaJs = "1.23.0"
   def scalaNative = "0.5.12"
 
   // Scala versions we build for on the JVM
