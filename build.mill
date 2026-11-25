@@ -18,7 +18,7 @@ object DepVersions {
   def scala213 = "2.13.18"
   def scala3 = "3.3.9"
   def scalaJs = "1.23.0"
-  def scalaNative = "0.5.12"
+  def scalaNative = "0.5.13"
 
   // Scala versions we build for on the JVM
   def scala = Seq(scala213, scala212, scala3)
